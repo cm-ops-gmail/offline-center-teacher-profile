@@ -65,7 +65,7 @@ After saving, both sheets are **read back from Google Sheets** and shown on scre
 
 Form questions map to sheet columns **in order** (question 1 → first criterion column, … question 5 → fifth).
 
-Setup (`.env`): `GEMINI_API_KEY` (from https://aistudio.google.com/apikey), `RESPONSES_SHEET_ID`, optionally `GEMINI_MODEL` (default `gemini-3.6-flash`). Both spreadsheets must be shared with the service account as **Editor**. In production set `UPLOAD_ACCESS_KEY` (uploads are refused without it). To measure accuracy before relying on it: `node scripts/ocr-check.mjs forms/*.jpg` and compare with the numbers you typed by hand.
+Setup (`.env`): `GEMINI_API_KEY` (from https://aistudio.google.com/apikey), `RESPONSES_SHEET_ID`, optionally `GEMINI_MODEL` (default `gemini-3.6-flash`). Both spreadsheets must be shared with the service account as **Editor**. Optionally set `UPLOAD_ACCESS_KEY` to require a password for uploads. To measure accuracy before relying on it: `node scripts/ocr-check.mjs forms/*.jpg` and compare with the numbers you typed by hand.
 
 ## Deploy on Vercel
 
@@ -78,7 +78,7 @@ Import the GitHub repo into Vercel (Framework: Next.js, no build settings to cha
 | `GOOGLE_PRIVATE_KEY` | yes | the `private_key` from the JSON key, on one line with literal `\n`, **no surrounding quotes** |
 | `RESPONSES_SHEET_ID` | for `/collect` | ID of the responses spreadsheet |
 | `GEMINI_API_KEY` | for `/collect` | key from https://aistudio.google.com/apikey |
-| `UPLOAD_ACCESS_KEY` | for `/collect` | a password you choose; uploads are refused in production without it |
+| `UPLOAD_ACCESS_KEY` | no | optional password for `/collect`; leave it out and uploads are open to anyone with the URL |
 | `GEMINI_MODEL` | no | defaults to `gemini-3.6-flash` |
 
 Things that behave differently on Vercel:

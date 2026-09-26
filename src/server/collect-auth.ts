@@ -3,16 +3,13 @@ import crypto from 'node:crypto';
 import { SheetsError } from './sheets';
 
 /**
- * These endpoints spend Anthropic credits and edit the Google Sheet, so they are never open by accident:
+ * These endpoints spend Gemini quota and edit the Google Sheet:
  *  - if UPLOAD_ACCESS_KEY is set, every call must send it in the `x-access-key` header;
- *  - if it is not set, they only work outside production (local development).
+ *  - if it is not set, they are open (anyone who can reach the app can upload).
  */
 export function assertUploadAllowed(request: Request): void {
   const required = process.env.UPLOAD_ACCESS_KEY;
-  if (!required) {
-    if (process.env.NODE_ENV === 'production') throw new SheetsError(403, 'Uploading is disabled: set UPLOAD_ACCESS_KEY on the server to turn it on.');
-    return;
-  }
+  if (!required) return;
   const given = request.headers.get('x-access-key') ?? '';
   const a = Buffer.from(given);
   const b = Buffer.from(required);

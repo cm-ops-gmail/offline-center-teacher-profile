@@ -260,7 +260,6 @@ function Body() {
 
       {lookupError && <Banner tone="bad">Could not load the branch and batch lists: {lookupError}</Banner>}
       {lookups && !lookups.ocrConfigured && <Banner tone="warn">Reading forms is not switched on yet. Add <code className="font-mono text-[12.5px]">GEMINI_API_KEY</code> to the <code className="font-mono text-[12.5px]">.env</code> file and restart the server. You can still enter forms by hand below.</Banner>}
-      {lookups?.production && !lookups.accessKeyRequired && <Banner tone="bad">Uploads are locked in production until <code className="font-mono text-[12.5px]">UPLOAD_ACCESS_KEY</code> is set on the server.</Banner>}
       {needKey && (
         <Banner tone="warn">
           <span className="flex flex-wrap items-center gap-2">
