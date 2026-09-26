@@ -1,0 +1,382 @@
+/* The design system sits in its own layer, below our components and utilities, so our styles always win. */
+@layer theme, base, ds, components, utilities;
+@import 'tailwindcss';
+@import '@tenminuteschool/design-system/styles.css' layer(ds);
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Same stack as the TA & Per-Diem system (Bangla-capable) */
+  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Noto Sans Bengali', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-secondary-background: var(--secondary-background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-gold: var(--gold);
+  --color-good: var(--good-text);
+  --color-critical: var(--critical-text);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-3: var(--viz-3);
+  --color-viz-4: var(--viz-4);
+  /* One radius, everything derived: cards are rounded-lg / rounded-xl = 0.625rem, as in the TA system */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 6px);
+}
+
+/* ---------- Tokens: the 10 Minute School design-system values, exactly as the TA & Per-Diem system uses them.
+   Pure neutral greys (no hue), a near-black primary, colour kept for meaning. ---------- */
+:root {
+  --radius: 0.625rem;
+
+  --secondary-background: oklch(98.5% 0.001 247); /* page (the TA system's --main-gray) */
+  --background: oklch(100% 0 0); /* cards */
+  --foreground: oklch(14.5% 0 0);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(14.5% 0 0);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(14.5% 0 0);
+  --primary: oklch(20.5% 0 0);
+  --primary-foreground: oklch(98.5% 0 0);
+  --secondary: oklch(97% 0 0);
+  --secondary-foreground: oklch(20.5% 0 0);
+  --muted: oklch(97% 0 0);
+  --muted-foreground: oklch(55.6% 0 0);
+  --accent: oklch(97% 0 0);
+  --accent-foreground: oklch(20.5% 0 0);
+  --destructive: oklch(57.7% 0.245 27.325);
+  --border: oklch(92.2% 0 0);
+  --input: oklch(92.2% 0 0);
+  --ring: oklch(70.8% 0 0);
+  --gold: oklch(76.9% 0.188 70.08); /* the design system's amber (chart-5): used only for "new" highlights */
+
+  --sidebar: oklch(100% 0 0);
+  --sidebar-foreground: oklch(14.5% 0 0);
+  --sidebar-accent: oklch(97% 0 0);
+  --sidebar-accent-foreground: oklch(20.5% 0 0);
+  --sidebar-border: oklch(92.2% 0 0);
+
+  /* data colours: each programme keeps its own fixed colour (validated colour-blind-safe set) */
+  --viz-1: #2a78d6; /* IELTS */
+  --viz-2: #eb6834; /* SEJ */
+  --viz-3: #1baf7a; /* EF */
+  --viz-4: #eda100; /* After SSC English */
+  --viz-first: #a3a3a3;
+  --viz-last: oklch(20.5% 0 0);
+  --viz-grid: #ececec;
+  --viz-axis: #d4d4d4;
+  --good: #0ca30c;
+  --good-text: oklch(50.8% 0.118 165.6); /* emerald-700, the TA system's "received / positive" */
+  --critical: #d03b3b;
+  --critical-text: oklch(58.6% 0.253 17.6); /* rose-600, the TA system's "negative" */
+  --warning: #fab219;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* the lightest shadow there is (shadow-xs) */
+  --shadow-hover: 0 8px 24px -10px rgb(0 0 0 / 0.18), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+
+  /* each card lights up in its own colour on hover */
+  --accent-1: #2a78d6; /* blue */
+  --accent-2: #eb6834; /* orange */
+  --accent-3: #1baf7a; /* green */
+  --accent-4: #eda100; /* amber */
+  --accent-5: #7c5cd6; /* violet */
+  --accent-6: #e0507a; /* rose */
+}
+
+.dark {
+  --secondary-background: oklch(14.5% 0 0);
+  --background: oklch(20.5% 0 0);
+  --foreground: oklch(98.5% 0 0);
+  --card: oklch(20.5% 0 0);
+  --card-foreground: oklch(98.5% 0 0);
+  --popover: oklch(20.5% 0 0);
+  --popover-foreground: oklch(98.5% 0 0);
+  --primary: oklch(92.2% 0 0);
+  --primary-foreground: oklch(20.5% 0 0);
+  --secondary: oklch(26.9% 0 0);
+  --secondary-foreground: oklch(98.5% 0 0);
+  --muted: oklch(26.9% 0 0);
+  --muted-foreground: oklch(70.8% 0 0);
+  --accent: oklch(26.9% 0 0);
+  --accent-foreground: oklch(98.5% 0 0);
+  --destructive: oklch(70.4% 0.191 22.216);
+  --border: oklch(100% 0 0 / 0.1);
+  --input: oklch(100% 0 0 / 0.15);
+  --ring: oklch(55.6% 0 0);
+
+  --sidebar: oklch(20.5% 0 0);
+  --sidebar-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(26.9% 0 0);
+  --sidebar-accent-foreground: oklch(98.5% 0 0);
+  --sidebar-border: oklch(100% 0 0 / 0.1);
+
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-first: #737373;
+  --viz-last: oklch(92.2% 0 0);
+  --viz-grid: #2c2c2a;
+  --viz-axis: #404040;
+  --good-text: #3fbf3f;
+  --critical-text: #ee7070;
+
+  --shadow-card: none;
+  --shadow-hover: 0 8px 24px -10px rgb(0 0 0 / 0.7);
+
+  --accent-1: #3987e5;
+  --accent-2: #f07a4c;
+  --accent-3: #2fc08a;
+  --accent-4: #f0b429;
+  --accent-5: #9085e9;
+  --accent-6: #ec6f96;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html,
+  body {
+    min-height: 100%;
+  }
+  body {
+    background: var(--secondary-background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--gold) 40%, transparent);
+  }
+}
+
+/* ---------- Same building blocks as the TA & Per-Diem system ---------- */
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A soft glow in the card's own colour that breathes while the pointer is on it. */
+@keyframes card-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--card-accent) 10%, transparent),
+      0 10px 26px -12px color-mix(in oklab, var(--card-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 5px color-mix(in oklab, var(--card-accent) 22%, transparent),
+      0 14px 32px -12px color-mix(in oklab, var(--card-accent) 65%, transparent);
+  }
+}
+
+@layer components {
+  /* Card: rounded-lg, a hairline border and the lightest shadow there is — that wakes up in its own colour on hover. */
+  .card,
+  .card-hover {
+    --card-accent: var(--accent-1);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    transition:
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+      background-color 0.28s ease;
+  }
+  .card-hover {
+    background: transparent;
+  }
+  /* Neighbouring cards take different colours, cycling through six. */
+  .card:nth-child(6n + 2), .card-hover:nth-child(6n + 2) { --card-accent: var(--accent-2); }
+  .card:nth-child(6n + 3), .card-hover:nth-child(6n + 3) { --card-accent: var(--accent-3); }
+  .card:nth-child(6n + 4), .card-hover:nth-child(6n + 4) { --card-accent: var(--accent-4); }
+  .card:nth-child(6n + 5), .card-hover:nth-child(6n + 5) { --card-accent: var(--accent-5); }
+  .card:nth-child(6n + 6), .card-hover:nth-child(6n + 6) { --card-accent: var(--accent-6); }
+
+  /* Cards rise in one after another when a screen loads. `backwards` so hover effects still work afterwards. */
+  .card {
+    animation: card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  }
+  .card:nth-child(2) { animation-delay: 60ms; }
+  .card:nth-child(3) { animation-delay: 120ms; }
+  .card:nth-child(4) { animation-delay: 180ms; }
+  .card:nth-child(5) { animation-delay: 240ms; }
+  .card:nth-child(6) { animation-delay: 300ms; }
+
+  /* Hover: the border fades to the card's colour and the glow starts to breathe. */
+  .card:hover,
+  .card-hover:hover {
+    border-color: var(--card-accent);
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--card-accent) 14%, transparent),
+      0 10px 26px -12px color-mix(in oklab, var(--card-accent) 50%, transparent);
+  }
+  .card:hover {
+    /* card-in is listed again unchanged so it does not replay; the glow is added next to it */
+    animation:
+      card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards,
+      card-pulse 1.8s ease-in-out 0.35s infinite;
+  }
+  .card-hover:hover {
+    animation: card-pulse 1.8s ease-in-out 0.35s infinite;
+  }
+
+  /* Tiles: lift a little, with a line in the card's colour sweeping across the top. */
+  .card-lift {
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+  }
+  .card-lift::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: var(--card-accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+  }
+  .card-lift:hover::after {
+    transform: scaleX(1);
+  }
+  .card-lift:active {
+    transform: translateY(-1px) scale(0.995);
+  }
+}
+
+/* Titles are small and bold, labels are small caps-ish: the TA system never shouts. */
+.font-display {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+/* Inputs share one look everywhere: a 9-unit control, the lightest of shadows, a 3px ring for keyboard focus. */
+.field {
+  width: 100%;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid var(--input);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.625rem 0.75rem;
+  font-size: 16px; /* iOS zooms into inputs under 16px */
+  box-shadow: var(--shadow-card);
+  outline: none;
+  transition: color 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+@media (min-width: 640px) {
+  .field {
+    height: 2.25rem;
+    padding-block: 0.25rem;
+    font-size: 0.875rem;
+  }
+}
+.field:hover {
+  border-color: color-mix(in oklab, var(--ring) 70%, var(--input));
+}
+.field:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+.field::placeholder {
+  color: var(--muted-foreground);
+}
+/* One chevron on every dropdown, drawn by us, so macOS / Windows / Android look alike. */
+select.field {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+}
+
+/* Anyone who asks their device for less motion gets none: no rise-in, no lift, no sweep. */
+.rise {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card-hover,
+  .card-lift,
+  .card-lift::after {
+    animation: none !important;
+    transition: border-color 0.01s !important;
+    transform: none !important;
+  }
+}
+
+@media print {
+  nav,
+  aside,
+  header {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
