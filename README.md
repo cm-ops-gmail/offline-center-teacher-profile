@@ -48,7 +48,7 @@ Dark mode and HQ-embedded mode (`?source=hq`) are kept. Each programme keeps its
 
 - "Needs attention" = declined batch, or latest rating below 4.50 (`ATTENTION_THRESHOLD` in `analytics.ts`).
 - The sheet is cached server-side for 5 minutes; the **Refresh** button bypasses the cache.
-- `/api/ratings` has no login of its own. Put the app behind HQ / your SSO before deploying publicly.
+- **Login:** every page and API route needs a sign-in (`src/proxy.ts`). The credentials are hard-coded in `src/lib/auth.ts` (username `admin`, password `123456`); change them there. The session is a signed cookie valid for 7 days, signed with `AUTH_SECRET` if set, otherwise `GOOGLE_PRIVATE_KEY`.
 
 ## Upload forms (OCR) — `/collect`
 
@@ -86,4 +86,4 @@ Things that behave differently on Vercel:
 - **Uploads are capped at 4 MB per file** (Vercel rejects request bodies over 4.5 MB). Photos are shrunk in the browser automatically; scan PDFs at ~150 dpi greyscale, or split them.
 - OCR can take up to 2 minutes on a large PDF (`maxDuration = 120` on `/api/collect/ocr`). Vercel's default limit on current plans allows this; if functions time out on your plan, upload smaller PDFs.
 - Saves stay safe across serverless instances: the per-programme lock also lives in the responses sheet (`_locks` tab).
-- The dashboard and `/api/ratings` have no login. Restrict access (Vercel Deployment Protection, or your SSO) if the URL should not be public. Note that Vercel Authentication also blocks the HQ iframe embed.
+- Sign-in is built in (see Notes). Optionally set `AUTH_SECRET` (any long random string) to sign sessions; if you don't, `GOOGLE_PRIVATE_KEY` is used.

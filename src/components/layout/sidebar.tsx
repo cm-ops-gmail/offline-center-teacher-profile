@@ -6,6 +6,7 @@ import { NAV, type NavItem } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
 import { SyncStatus } from './sync-status';
+import { LogoutButton } from './logout-button';
 
 function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
@@ -78,7 +79,10 @@ export function Sidebar({ embedded, open, onClose }: { embedded: boolean; open: 
         {embedded && (
           <div className="flex items-center justify-between border-t border-sidebar-border p-3">
             <SyncStatus />
-            <ThemeToggle />
+            <span className="flex items-center">
+              <ThemeToggle />
+              <LogoutButton />
+            </span>
           </div>
         )}
       </aside>

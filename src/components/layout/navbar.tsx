@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 import { APP_NAME, NAV } from '@/lib/nav';
 import { ThemeToggle } from './theme-toggle';
 import { SyncStatus } from './sync-status';
+import { LogoutButton } from './logout-button';
 
 function currentLabel(pathname: string): string {
   const items = NAV.flatMap((g) => g.items);
@@ -47,6 +48,7 @@ export function Header({ embedded, onMenu }: { embedded: boolean; onMenu: () => 
 
       <SyncStatus />
       <ThemeToggle />
+      <LogoutButton />
     </header>
   );
 }
