@@ -53,13 +53,32 @@ export type AccessMode = 'read' | 'write';
 const SCOPES: Record<AccessMode, string> = { read: 'https://www.googleapis.com/auth/spreadsheets.readonly', write: 'https://www.googleapis.com/auth/spreadsheets' };
 const tokenCache: Partial<Record<AccessMode, { token: string; expires: number }>> = {};
 
+/**
+ * Accepts the key however it was pasted: with or without quotes, with literal "\n", real line breaks, or
+ * line breaks flattened into spaces (which some dashboards do), and rebuilds a valid PEM.
+ */
+export function normalizePrivateKey(raw: string): string {
+  let k = raw.trim();
+  // a whole service-account JSON pasted by mistake
+  if (k.startsWith('{')) {
+    try {
+      k = String(JSON.parse(k).private_key ?? '');
+    } catch {}
+  }
+  k = k.replace(/^["']+|["']+$/g, '').replace(/\\r/g, '').replace(/\\n/g, '\n').replace(/\r/g, '');
+  const m = k.match(/-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/);
+  if (!m) throw new SheetsError(500, 'GOOGLE_PRIVATE_KEY is not a valid private key: it must start with -----BEGIN PRIVATE KEY----- and end with -----END PRIVATE KEY-----.');
+  const body = m[2].replace(/\s+/g, '');
+  return `-----BEGIN ${m[1]}-----\n${body.match(/.{1,64}/g)?.join('\n') ?? ''}\n-----END ${m[1]}-----\n`;
+}
+
 /** Read-only by default; 'write' is only ever requested by the form-upload publish step. */
 export async function getAccessToken(mode: AccessMode = 'read'): Promise<string> {
   const cached = tokenCache[mode];
   if (cached && cached.expires > Date.now() + 60_000) return cached.token;
 
   const clientEmail = env('GOOGLE_CLIENT_EMAIL');
-  const privateKey = env('GOOGLE_PRIVATE_KEY').replace(/\\n/g, '\n');
+  const privateKey = normalizePrivateKey(env('GOOGLE_PRIVATE_KEY'));
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
   const unsigned =
