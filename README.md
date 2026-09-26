@@ -66,3 +66,24 @@ After saving, both sheets are **read back from Google Sheets** and shown on scre
 Form questions map to sheet columns **in order** (question 1 → first criterion column, … question 5 → fifth).
 
 Setup (`.env`): `GEMINI_API_KEY` (from https://aistudio.google.com/apikey), `RESPONSES_SHEET_ID`, optionally `GEMINI_MODEL` (default `gemini-3.6-flash`). Both spreadsheets must be shared with the service account as **Editor**. In production set `UPLOAD_ACCESS_KEY` (uploads are refused without it). To measure accuracy before relying on it: `node scripts/ocr-check.mjs forms/*.jpg` and compare with the numbers you typed by hand.
+
+## Deploy on Vercel
+
+Import the GitHub repo into Vercel (Framework: Next.js, no build settings to change), then add these under **Project → Settings → Environment Variables** (Production) and redeploy:
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `GOOGLE_SHEET_ID` | yes | ID of the master sheet (`/d/<ID>/` in its URL) |
+| `GOOGLE_CLIENT_EMAIL` | yes | service-account email |
+| `GOOGLE_PRIVATE_KEY` | yes | the `private_key` from the JSON key, on one line with literal `\n`, **no surrounding quotes** |
+| `RESPONSES_SHEET_ID` | for `/collect` | ID of the responses spreadsheet |
+| `GEMINI_API_KEY` | for `/collect` | key from https://aistudio.google.com/apikey |
+| `UPLOAD_ACCESS_KEY` | for `/collect` | a password you choose; uploads are refused in production without it |
+| `GEMINI_MODEL` | no | defaults to `gemini-3.6-flash` |
+
+Things that behave differently on Vercel:
+
+- **Uploads are capped at 4 MB per file** (Vercel rejects request bodies over 4.5 MB). Photos are shrunk in the browser automatically; scan PDFs at ~150 dpi greyscale, or split them.
+- OCR can take up to 2 minutes on a large PDF (`maxDuration = 120` on `/api/collect/ocr`). Vercel's default limit on current plans allows this; if functions time out on your plan, upload smaller PDFs.
+- Saves stay safe across serverless instances: the per-programme lock also lives in the responses sheet (`_locks` tab).
+- The dashboard and `/api/ratings` have no login. Restrict access (Vercel Deployment Protection, or your SSO) if the URL should not be public. Note that Vercel Authentication also blocks the HQ iframe embed.

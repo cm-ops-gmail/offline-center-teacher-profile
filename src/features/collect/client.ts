@@ -30,9 +30,15 @@ export async function api<T>(url: string, init: RequestInit = {}): Promise<T> {
   return json as T;
 }
 
+/** Vercel rejects request bodies over 4.5 MB, so files are kept under this. */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 /** Phone photos are huge; shrink to ~2000px JPEG before uploading. PDFs pass through untouched. */
 export async function prepareFile(file: File): Promise<File> {
-  if (file.type === 'application/pdf') return file;
+  if (file.type === 'application/pdf') {
+    if (file.size > MAX_UPLOAD_BYTES) throw new Error('This PDF is over 4 MB. Scan at a lower quality (150 dpi, greyscale) or split it into two files.');
+    return file;
+  }
   if (!file.type.startsWith('image/')) throw new Error('Use a JPG, PNG or WebP photo, or a PDF.');
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -41,11 +47,15 @@ export async function prepareFile(file: File): Promise<File> {
     canvas.width = Math.round(bmp.width * scale);
     canvas.height = Math.round(bmp.height * scale);
     canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.88));
-    if (!blob) throw new Error('encode');
+    let blob: Blob | null = null;
+    for (const quality of [0.88, 0.75, 0.6]) {
+      blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', quality));
+      if (blob && blob.size <= MAX_UPLOAD_BYTES) break;
+    }
+    if (!blob || blob.size > MAX_UPLOAD_BYTES) throw new Error('too large');
     return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
   } catch {
-    throw new Error('Could not open this photo. If it is an iPhone HEIC image, export it as JPG first.');
+    throw new Error('Could not prepare this photo (it may be too large, or an iPhone HEIC image — export it as JPG first).');
   }
 }
 
