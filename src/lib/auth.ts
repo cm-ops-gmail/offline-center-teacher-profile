@@ -3,7 +3,7 @@
  * secret. Uses Web Crypto only, so it runs in the proxy as well as in route handlers.
  */
 export const LOGIN_USER = 'admin';
-export const LOGIN_PASSWORD = '123456';
+export const LOGIN_PASSWORD = '654321';
 
 export const SESSION_COOKIE = 'tp_session';
 export const SESSION_SECONDS = 60 * 60 * 24 * 7;

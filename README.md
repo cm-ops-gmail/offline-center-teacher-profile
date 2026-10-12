@@ -48,7 +48,7 @@ Dark mode and HQ-embedded mode (`?source=hq`) are kept. Each programme keeps its
 
 - "Needs attention" = declined batch, or latest rating below 4.50 (`ATTENTION_THRESHOLD` in `analytics.ts`).
 - The sheet is cached server-side for 5 minutes; the **Refresh** button bypasses the cache.
-- **Login:** every page and API route needs a sign-in (`src/proxy.ts`). The credentials are hard-coded in `src/lib/auth.ts` (username `admin`, password `123456`); change them there. The session is a signed cookie valid for 7 days, signed with `AUTH_SECRET` if set, otherwise `GOOGLE_PRIVATE_KEY`.
+- **Login:** every page and API route needs a sign-in (`src/proxy.ts`). The credentials are hard-coded in `src/lib/auth.ts` (username `admin`, password `654321`); change them there. The session is a signed cookie valid for 7 days, signed with `AUTH_SECRET` if set, otherwise `GOOGLE_PRIVATE_KEY`.
 
 ## Upload forms (OCR) — `/collect`
 
