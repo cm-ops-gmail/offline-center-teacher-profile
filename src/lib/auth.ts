@@ -8,8 +8,8 @@ export const LOGIN_PASSWORD = '654321';
 export const SESSION_COOKIE = 'tp_session';
 export const SESSION_SECONDS = 60 * 60 * 24 * 7;
 
-// AUTH_SECRET if set; otherwise the Google private key (already secret and server-only); otherwise a dev-only value.
-const secret = () => process.env.AUTH_SECRET || process.env.GOOGLE_PRIVATE_KEY || 'dev-only-secret';
+// AUTH_SECRET if set; otherwise the Google private key or Supabase secret key (server-only); otherwise a dev-only value.
+const secret = () => process.env.AUTH_SECRET || process.env.GOOGLE_PRIVATE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'dev-only-secret';
 
 const enc = new TextEncoder();
 

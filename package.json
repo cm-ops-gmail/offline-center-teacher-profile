@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "sheet:inspect": "node scripts/inspect-sheet.mjs"
+    "db:seed": "node scripts/seed-supabase.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

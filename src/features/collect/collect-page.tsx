@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Check, CheckCircle2, ExternalLink, FileText, Loader2, Plus, RotateCcw, Trash2, UploadCloud, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, FileText, Loader2, Plus, RotateCcw, Trash2, UploadCloud, X } from 'lucide-react';
 import { Button, Input } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { PageHeader, Pill, SectionTitle } from '@/components/ui/primitives';
@@ -76,7 +76,7 @@ function Body() {
   const teacherNames = useMemo(() => (data?.teachers ?? []).map((t) => t.sheetName), [data]);
   const nameKey = (n: string) => looseKey(n.replace(/^\s*[A-Za-z]{2,5}\d{1,4}\s*[-–—]\s*/, ''));
   const knownTeacher = teacherNames.some((n) => nameKey(n) === nameKey(teacher));
-  /** On leaving a field: same spelling as the sheet already uses, or a tidy format for something new. */
+  /** On leaving a field: same spelling the data already uses, or a tidy format for something new. */
   const tidyTeacher = () => {
     if (!teacher.trim()) return;
     setTeacher(teacherNames.find((n) => nameKey(n) === nameKey(teacher)) ?? formatName(teacher));
@@ -212,7 +212,7 @@ function Body() {
     const mRow = sv?.master.rows.find((r) => r.highlight)?.row;
     return (
       <div className="flex flex-col gap-7">
-        <PageHeader eyebrow="Collect" title="Saved to" emphasis="the sheets" description="This is read back from Google Sheets just now, so what you see below is exactly what is in the sheets. Refresh the dashboard to see it there too." />
+        <PageHeader eyebrow="Collect" title="Saved to" emphasis="the database" description="This is read back from the database just now, so what you see below is exactly what is stored. The dashboard shows it too." />
         <section className="rise flex flex-col gap-6 card p-5 sm:p-6">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] font-medium">
             <CheckCircle2 className="size-5 text-good" />
@@ -224,27 +224,17 @@ function Body() {
 
           {sv ? (
             <>
-              <SheetGrid view={sv.students} title="1 · Student sheet" subtitle={`${sv.students.spreadsheet} › “${sv.students.tab}” tab — ${plural(newRows.length, 'new row')}${rowRange ? ` (${rowRange})` : ''} for this batch and round`} maxHeight={340} />
-              <SheetGrid view={sv.master} title="2 · Master sheet" subtitle={`“${sv.master.tab}” tab — ${mRow ? `the highlighted row ${mRow} is the batch average that was just written` : 'the batch average'}`} maxHeight={260} />
+              <SheetGrid view={sv.students} title="1 · Student rows" subtitle={`“${sv.students.tab}” table — ${plural(newRows.length, 'new row')}${rowRange ? ` (${rowRange})` : ''} for this batch and round`} maxHeight={340} />
+              <SheetGrid view={sv.master} title="2 · Master ratings" subtitle={`“${sv.master.tab}” table — ${mRow ? `the highlighted row ${mRow} is the batch average that was just written` : 'the batch average'}`} maxHeight={260} />
             </>
           ) : (
             <>
-              <p className="text-[13.5px] text-muted-foreground">The save went through, but the sheets could not be read back just now. Open them to check:</p>
+              <p className="text-[13.5px] text-muted-foreground">The save went through, but it could not be read back just now:</p>
               <PlanTable plan={saved.plan} />
             </>
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <a href={saved.masterUrl} target="_blank" rel="noreferrer" className="gap-2">
-                Open master row <ExternalLink className="size-4" />
-              </a>
-            </Button>
-            <Button asChild variant="outline">
-              <a href={saved.responsesUrl} target="_blank" rel="noreferrer" className="gap-2">
-                Open student rows <ExternalLink className="size-4" />
-              </a>
-            </Button>
             <Button variant="ghost" onClick={clearAll}>
               Upload another batch
             </Button>
@@ -256,7 +246,7 @@ function Body() {
 
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader eyebrow="Collect" title="Upload" emphasis="forms" description="Photograph or scan a batch’s paper forms. Each is read, you check it, and the batch average goes into the sheet." />
+      <PageHeader eyebrow="Collect" title="Upload" emphasis="forms" description="Photograph or scan a batch’s paper forms. Each is read, you check it, and the batch average is saved to the database." />
 
       {lookupError && <Banner tone="bad">Could not load the branch and batch lists: {lookupError}</Banner>}
       {lookups && !lookups.ocrConfigured && <Banner tone="warn">Reading forms is not switched on yet. Add <code className="font-mono text-[12.5px]">GEMINI_API_KEY</code> to the <code className="font-mono text-[12.5px]">.env</code> file and restart the server. You can still enter forms by hand below.</Banner>}
@@ -324,7 +314,7 @@ function Body() {
           <Field label="Teacher" className="xl:col-span-1">
             <Input value={teacher} onChange={(e) => { setTeacher(e.target.value); resetPlan(); }} onBlur={tidyTeacher} list="teacher-list" placeholder="Start typing a name…" className="h-9" />
             <datalist id="teacher-list">{teacherNames.map((n) => <option key={n} value={n} />)}</datalist>
-            {teacher.trim() && !knownTeacher && <p className="mt-1 text-[12px] text-muted-foreground">Not in the sheet yet — will be added as “{formatName(teacher)}”.</p>}
+            {teacher.trim() && !knownTeacher && <p className="mt-1 text-[12px] text-muted-foreground">Not saved yet — will be added as “{formatName(teacher)}”.</p>}
           </Field>
           <Field label="Which round is this?">
             <div role="group" aria-label="Rating round" className="flex rounded-lg border border-input p-0.5">
@@ -477,7 +467,7 @@ function Body() {
             <div className="flex flex-col items-start justify-center gap-2 lg:items-end">
               <Button size="lg" disabled={!detailsReady || usable.length === 0 || toCheck > 0 || busy || saving !== 'idle'} onClick={() => check()} className="gap-2">
                 {saving === 'checking' && <Loader2 className="size-4 animate-spin" />}
-                Check &amp; save to sheet
+                Check &amp; save
               </Button>
               <p className="max-w-64 text-[12px] text-muted-foreground lg:text-right">
                 {!detailsReady ? 'Fill in step 1 first.' : toCheck > 0 ? `${plural(toCheck, 'form')} still to check.` : busy ? 'Still reading files…' : 'You will see exactly what changes before anything is written.'}
@@ -539,14 +529,13 @@ function Body() {
             <ul className="flex flex-col gap-1.5 text-[13.5px]">
               <li>
                 {plan.master.action === 'update' ? (
-                  <>The <strong>{ROUND_LABEL[round]}</strong> row for this batch <strong>already exists</strong> (row {plan.master.row} of “{plan.master.tab}”). Its five scores will be <strong>updated</strong> with the new average.</>
+                  <>The <strong>{ROUND_LABEL[round]}</strong> row for this batch <strong>already exists</strong> (id {plan.master.row} in “{plan.master.tab}”). Its five scores will be <strong>updated</strong> with the new average.</>
                 ) : (
-                  <>A <strong>new row</strong> will be added at row {plan.master.row} of “{plan.master.tab}”.</>
+                  <>A <strong>new row</strong> will be added to “{plan.master.tab}”.</>
                 )}
               </li>
               <li>
-                {plural(plan.responses.add, 'student row')} will be saved first in the “{plan.responses.tab}” tab of <strong>{plan.responses.spreadsheet}</strong>
-                {plan.responses.exists ? '' : ' (the tab will be created)'}
+                {plural(plan.responses.add, 'student row')} will be saved first under <strong>{plan.responses.tab}</strong> in the database
                 {plan.responses.replace > 0 && <>, deleting the {plan.responses.replace} saved earlier for this batch</>}.
               </li>
               {plan.warnings.map((w) => (
@@ -556,7 +545,7 @@ function Body() {
             <div className="flex flex-wrap gap-2">
               <Button onClick={save} disabled={saving !== 'idle'} className="gap-2">
                 {saving === 'saving' && <Loader2 className="size-4 animate-spin" />}
-                {plan.responses.existing > 0 ? (plan.responses.mode === 'add' ? 'Add and save' : 'Replace and save') : plan.master.action === 'update' ? 'Replace and save' : 'Save to Google Sheet'}
+                {plan.responses.existing > 0 ? (plan.responses.mode === 'add' ? 'Add and save' : 'Replace and save') : plan.master.action === 'update' ? 'Replace and save' : 'Save'}
               </Button>
               <Button variant="ghost" onClick={resetPlan}>Cancel</Button>
             </div>
@@ -755,7 +744,7 @@ function PlanTable({ plan }: { plan: PublishPlan }) {
         <tbody>
           {master.before && (
             <tr className="text-muted-foreground">
-              <td className="px-3 py-2">Now in sheet</td>
+              <td className="px-3 py-2">Now saved</td>
               {master.before.map((v, i) => (
                 <td key={i} className="tabular px-3 py-2 text-center">{typeof v === 'number' ? v.toFixed(2) : v || '—'}</td>
               ))}

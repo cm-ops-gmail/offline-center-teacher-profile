@@ -25,15 +25,15 @@ function Body({ issues }: { issues: DataIssue[] }) {
         eyebrow="Source"
         title="Data"
         emphasis="health"
-        description="What the dashboard read from the Google Sheet, what it tidied up on the way, and what is worth a second look in the sheet itself."
+        description="What the dashboard read from the database, what it tidied up on the way, and what is worth a second look in the data itself."
         actions={
           <>
             <Button variant="outline" onClick={() => refresh()} disabled={isValidating} className="gap-2">
-              <RefreshCw className={cn('size-4', isValidating && 'animate-spin')} /> Re-read sheet
+              <RefreshCw className={cn('size-4', isValidating && 'animate-spin')} /> Re-read data
             </Button>
             <Button asChild>
               <a href={data.sheetUrl} target="_blank" rel="noreferrer" className="gap-2">
-                Open sheet <ExternalLink className="size-4" />
+                Open database <ExternalLink className="size-4" />
               </a>
             </Button>
           </>
@@ -41,13 +41,13 @@ function Body({ issues }: { issues: DataIssue[] }) {
       />
 
       <section className="rise card p-5 sm:p-6">
-        <SectionTitle title="Tabs read" hint={<>“{data.sheetTitle}” · synced {new Date(data.syncedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</>} />
+        <SectionTitle title="Programmes read" hint={<>“{data.sheetTitle}” · synced {new Date(data.syncedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</>} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-[13.5px]">
             <thead className="text-left text-[12px] text-muted-foreground">
               <tr className="border-b border-border">
                 <th className="py-2 pr-3 font-medium">Programme</th>
-                <th className="py-2 pr-3 font-medium">Sheet tab</th>
+                <th className="py-2 pr-3 font-medium">Source</th>
                 <th className="py-2 pr-3 text-right font-medium">Rating rows</th>
                 <th className="py-2 pr-3 text-right font-medium">Batches</th>
                 <th className="py-2 text-right font-medium">Teachers</th>
@@ -71,10 +71,10 @@ function Body({ issues }: { issues: DataIssue[] }) {
       </section>
 
       <section className="rise card p-5 sm:p-6">
-        <SectionTitle title="Worth a look in the sheet" right={review.length ? <Pill tone="warn">{review.length}</Pill> : undefined} />
+        <SectionTitle title="Worth a look in the data" right={review.length ? <Pill tone="warn">{review.length}</Pill> : undefined} />
         {review.length === 0 ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="size-4 text-good" /> Nothing to fix — the sheet is consistent.
+            <CheckCircle2 className="size-4 text-good" /> Nothing to fix — the data is consistent.
           </p>
         ) : (
           <ul className="flex flex-col">
@@ -114,7 +114,7 @@ function Body({ issues }: { issues: DataIssue[] }) {
           <li>
             Teachers are matched by name with the staff-code prefix removed, so “LCI019 - Rifah Salsabil” and “Rifah Salsabil” are the same person.
           </li>
-          <li>The sheet is read live and cached for five minutes; “Refresh” always re-reads it.</li>
+          <li>The data is read live and cached for one minute; “Refresh” always re-reads it.</li>
         </ul>
       </section>
     </div>

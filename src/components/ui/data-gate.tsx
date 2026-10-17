@@ -6,7 +6,7 @@ import { useRatingsData } from '@/features/ratings/filters';
 import type { RatingsPayload } from '@/features/ratings/types';
 import { Skeleton } from './primitives';
 
-/** Shows a skeleton while the sheet loads and a helpful error if it can't be read; otherwise renders children with the data. */
+/** Shows a skeleton while the data loads and a helpful error if it can't be read; otherwise renders children with the data. */
 export function DataGate({ children }: { children: (data: RatingsPayload) => ReactNode }) {
   const { data, error, isLoading, refresh } = useRatingsData();
 
@@ -19,7 +19,7 @@ export function DataGate({ children }: { children: (data: RatingsPayload) => Rea
           <AlertTriangle className="size-5" />
         </span>
         <div>
-          <h2 className="text-base font-bold">We couldn’t read the sheet</h2>
+          <h2 className="text-base font-bold">We couldn’t load the data</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{error.message}</p>
         </div>
         <Button onClick={() => refresh()}>Try again</Button>

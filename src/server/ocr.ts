@@ -3,7 +3,7 @@ import { ApiError, GoogleGenAI, MediaResolution } from '@google/genai';
 import { z } from 'zod';
 import { toResponses, type RawForm } from '@/features/collect/parse';
 import type { StudentResponse } from '@/features/collect/types';
-import { SheetsError } from './sheets';
+import { AppError } from './db';
 
 /** Change with GEMINI_MODEL in .env — see https://ai.google.dev/gemini-api/docs/models */
 const DEFAULT_MODEL = 'gemini-3.6-flash';
@@ -103,7 +103,7 @@ function toRaw(reply: z.infer<typeof Reply>): { forms: RawForm[] } {
 
 export async function readForms(file: { name: string; mime: AcceptedType; base64: string }, idPrefix: string): Promise<StudentResponse[]> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new SheetsError(503, 'Reading forms needs a Gemini API key. Add GEMINI_API_KEY to .env and restart the server.');
+  if (!apiKey) throw new AppError(503, 'Reading forms needs a Gemini API key. Add GEMINI_API_KEY to .env and restart the server.');
   client ??= new GoogleGenAI({ apiKey });
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
 
@@ -125,20 +125,20 @@ export async function readForms(file: { name: string; mime: AcceptedType; base64
   for (let attempt = 0; ; attempt++) {
     try {
       const response = await generate(highRes);
-      if (response.promptFeedback?.blockReason) throw new SheetsError(422, 'Gemini declined to read this file. Enter its answers by hand instead.');
+      if (response.promptFeedback?.blockReason) throw new AppError(422, 'Gemini declined to read this file. Enter its answers by hand instead.');
       const text = response.text;
-      if (!text) throw new SheetsError(502, 'The reader returned nothing for this file. Try again, or enter it by hand.');
+      if (!text) throw new AppError(502, 'The reader returned nothing for this file. Try again, or enter it by hand.');
       let json: unknown;
       try {
         json = JSON.parse(text);
       } catch {
-        throw new SheetsError(502, 'The reader returned something unexpected for this file. Try again, or enter it by hand.');
+        throw new AppError(502, 'The reader returned something unexpected for this file. Try again, or enter it by hand.');
       }
       const parsed = Reply.safeParse(json);
-      if (!parsed.success) throw new SheetsError(502, 'The reader returned something unexpected for this file. Try again, or enter it by hand.');
+      if (!parsed.success) throw new AppError(502, 'The reader returned something unexpected for this file. Try again, or enter it by hand.');
       return toResponses(toRaw(parsed.data), file.name, idPrefix);
     } catch (e) {
-      if (e instanceof SheetsError) throw e;
+      if (e instanceof AppError) throw e;
       if (e instanceof ApiError) {
         if (e.status === 400 && highRes && /resolution/i.test(e.message)) {
           highRes = false; // this model does not take the setting: retry once without it
@@ -150,11 +150,11 @@ export async function readForms(file: { name: string; mime: AcceptedType; base64
           await sleep(hint ? Math.min(60_000, Number(hint[1]) * 1000 + 500) : [4000, 10000, 20000, 40000][attempt]);
           continue;
         }
-        if (e.status === 429) throw new SheetsError(429, 'Gemini is rate-limiting this key. Wait a minute and press retry, or use a key with a higher quota.');
-        if (e.status === 404) throw new SheetsError(502, `Gemini model "${model}" is not available for this key. Set GEMINI_MODEL in .env to a current model (https://ai.google.dev/gemini-api/docs/models).`);
-        if (e.status === 401 || e.status === 403 || (e.status === 400 && /api key/i.test(e.message))) throw new SheetsError(401, 'Gemini rejected the API key. Check GEMINI_API_KEY.');
-        if (e.status === 400) throw new SheetsError(400, `Gemini could not use this file: ${e.message.slice(0, 200)}`);
-        throw new SheetsError(502, `Gemini is unavailable (${e.status}). Try again shortly.`);
+        if (e.status === 429) throw new AppError(429, 'Gemini is rate-limiting this key. Wait a minute and press retry, or use a key with a higher quota.');
+        if (e.status === 404) throw new AppError(502, `Gemini model "${model}" is not available for this key. Set GEMINI_MODEL in .env to a current model (https://ai.google.dev/gemini-api/docs/models).`);
+        if (e.status === 401 || e.status === 403 || (e.status === 400 && /api key/i.test(e.message))) throw new AppError(401, 'Gemini rejected the API key. Check GEMINI_API_KEY.');
+        if (e.status === 400) throw new AppError(400, `Gemini could not use this file: ${e.message.slice(0, 200)}`);
+        throw new AppError(502, `Gemini is unavailable (${e.status}). Try again shortly.`);
       }
       throw e;
     }

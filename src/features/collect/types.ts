@@ -51,15 +51,14 @@ export interface PublishPlan {
   written: { teacher: string; branch: string; level: string | null; batch: string; round: string; changes: string[] };
   master: {
     tab: string;
-    gid: number;
     action: 'update' | 'add';
-    /** 1-based sheet row. */
-    row: number;
+    /** Id of the existing master row (null when a new one will be added). */
+    row: number | null;
     columns: string[];
     before: (string | number)[] | null;
     after: (string | number)[];
   };
-  /** Where the individual student rows are saved first (a separate spreadsheet, one tab per programme). */
+  /** Where the individual student rows are saved first (one row per student). */
   responses: {
     spreadsheet: string;
     tab: string;
@@ -79,11 +78,11 @@ export interface PublishPlan {
   warnings: string[];
 }
 
-/** A slice of a Google Sheet, read back after saving, exactly as the sheet shows it. */
+/** A slice of a table, read back after saving, exactly as stored. */
 export interface SheetView {
   spreadsheet: string;
   tab: string;
-  url: string;
+  url?: string;
   /** Row 1 of the tab. */
   headers: string[];
   rows: { row: number; cells: string[]; highlight: boolean }[];
@@ -93,7 +92,4 @@ export interface PublishResult {
   plan: PublishPlan;
   /** Read back from the sheets after the save (absent if the read-back itself failed — the save still happened). */
   view?: { students: SheetView; master: SheetView };
-  sheetUrl: string;
-  masterUrl: string;
-  responsesUrl: string;
 }

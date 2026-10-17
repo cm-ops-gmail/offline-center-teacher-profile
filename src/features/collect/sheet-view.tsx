@@ -12,7 +12,7 @@ function letter(i: number): string {
 
 const isNumber = (v: string) => v !== '' && /^-?\d+(\.\d+)?$/.test(v);
 
-/** A Google-Sheets-style read-only grid: column letters, row numbers, the sheet's own header row and values. */
+/** A sheet-style read-only grid: column letters, row ids, the header row and the stored values. */
 export function SheetGrid({ view, title, subtitle, maxHeight = 380 }: { view: SheetView; title: string; subtitle: string; maxHeight?: number }) {
   const heads = view.headers.map((h) => h.toLowerCase());
   const highlighted = view.rows.filter((r) => r.highlight).length;
@@ -24,11 +24,13 @@ export function SheetGrid({ view, title, subtitle, maxHeight = 380 }: { view: Sh
           <h3 className="text-sm font-bold">{title}</h3>
           <p className="text-[12.5px] text-muted-foreground">{subtitle}</p>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <a href={view.url} target="_blank" rel="noreferrer" className="gap-1.5">
-            Open in Google Sheets <ExternalLink className="size-3.5" />
-          </a>
-        </Button>
+        {view.url && (
+          <Button asChild size="sm" variant="outline">
+            <a href={view.url} target="_blank" rel="noreferrer" className="gap-1.5">
+              Open <ExternalLink className="size-3.5" />
+            </a>
+          </Button>
+        )}
       </div>
 
       <div className="overflow-auto rounded-lg border border-border bg-background" style={{ maxHeight }}>
