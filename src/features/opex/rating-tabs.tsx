@@ -6,25 +6,28 @@ import { cn } from '@/lib/utils';
 type Tab = 'student' | 'opex' | 'programme';
 const LABEL: Record<Tab, string> = { student: 'Student rating', opex: 'OpEx rating', programme: 'Programme team rating' };
 
-/** Student rating | OpEx rating | Programme team rating — kept in the URL as `?rating=opex` / `?rating=programme` so a view can be shared. */
-export function RatingTabs({ student, opex, programme, studentCount, opexCount, programmeCount }: { student: ReactNode; opex: ReactNode; programme: ReactNode; studentCount?: number; opexCount: number; programmeCount: number }) {
+/** The open rating tab (from `?rating=`) and a function to switch it. Member / question filters reset on a switch because each team has its own. */
+export function useRatingTab(): [Tab, (tab: Tab) => void] {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const raw = params.get('rating');
   const active: Tab = raw === 'opex' || raw === 'programme' ? raw : 'student';
-
   const go = (tab: Tab) => {
     const next = new URLSearchParams(params.toString());
     if (tab === 'student') next.delete('rating');
     else next.set('rating', tab);
-    // member and question filters belong to one team's questions, so they reset when the tab changes
     next.delete('rater');
     next.delete('question');
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
+  return [active, go];
+}
 
+/** Student rating | OpEx rating | Programme team rating — kept in the URL as `?rating=opex` / `?rating=programme` so a view can be shared. */
+export function RatingTabs({ student, opex, programme, studentCount, opexCount, programmeCount }: { student: ReactNode; opex: ReactNode; programme: ReactNode; studentCount?: number; opexCount: number; programmeCount: number }) {
+  const [active, go] = useRatingTab();
   const counts: Record<Tab, number | undefined> = { student: studentCount, opex: opexCount, programme: programmeCount };
   return (
     <div className="flex flex-col gap-6">

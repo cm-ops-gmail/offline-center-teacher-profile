@@ -8,6 +8,7 @@ import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { byBranch, summarize } from '@/features/ratings/analytics';
 import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS } from '@/features/ratings/programs';
+import { RatingSummary } from '@/features/opex/rating-summary';
 import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { fmt, plural } from '@/lib/format';
@@ -38,6 +39,7 @@ function Body() {
   return (
     <div className="flex flex-col gap-7">
       <PageHeader eyebrow="Centres" title="Branch" emphasis="comparison" description={`${plural(groups.length, 'branch', 'branches')} in view. Small branches have few batches, so read their averages with care. Click a branch to see its ratings.`} />
+      <RatingSummary interactive />
       <FilterBar show={['program']} opexAware />
 
       <RatingTabs

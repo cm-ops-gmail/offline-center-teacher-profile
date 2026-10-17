@@ -15,6 +15,7 @@ import { summarize } from '@/features/ratings/analytics';
 import { BatchTable } from '@/features/programs/batch-table';
 import { DashboardFilters } from '@/features/programs/dashboard-filters';
 import { TeacherComparison } from '@/features/compare/teacher-comparison';
+import { RatingSummary } from '@/features/opex/rating-summary';
 import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { BatchesInfo, RatingInfo, RoundInfo } from './kpi-info';
@@ -86,6 +87,7 @@ function Body({ lockedProgram }: { lockedProgram?: ProgramId }) {
           )
         }
       />
+      <RatingSummary program={lockedProgram} interactive />
       <DashboardFilters lockedProgram={lockedProgram} />
 
       <RatingTabs

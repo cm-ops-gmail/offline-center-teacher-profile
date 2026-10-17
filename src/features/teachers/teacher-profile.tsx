@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { Monogram, ProgramChip, SectionTitle } from '@/components/ui/primitives';
+import { RatingSummary } from '@/features/opex/rating-summary';
 import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { Detail, Kpis } from '@/features/dashboard/dashboard';
@@ -71,6 +72,7 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
         </div>
       </header>
 
+      <RatingSummary teacher={id} interactive />
       <DashboardFilters lockedTeacher={id} />
 
       <RatingTabs

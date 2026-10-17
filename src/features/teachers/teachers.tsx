@@ -6,6 +6,7 @@ import { Input } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { FilterBar } from '@/components/layout/filter-bar';
 import { Monogram, PageHeader, ProgramChip } from '@/components/ui/primitives';
+import { RatingSummary } from '@/features/opex/rating-summary';
 import { Kpis } from '@/features/dashboard/dashboard';
 import { byTeacher, summarize } from '@/features/ratings/analytics';
 import { useRatingsData } from '@/features/ratings/filters';
@@ -72,6 +73,7 @@ function Body() {
   return (
     <div className="flex flex-col gap-7">
       <PageHeader eyebrow="Faculty" title="The" emphasis="teachers" description={`${plural(rows.length, 'teacher')} in view. Average Rating adds up the rating of each of a teacher’s batches (its First and Last Rating averaged) and divides by the number of batches.`} />
+      <RatingSummary />
       <FilterBar show={['program', 'branch']} />
 
       {batches.length > 0 && <Kpis s={summarize(batches)} batches={batches} cls="all" round="" />}
