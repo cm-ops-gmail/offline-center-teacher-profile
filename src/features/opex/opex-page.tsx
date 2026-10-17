@@ -10,40 +10,46 @@ import { formatName } from '@/features/collect/normalize';
 import { useRatingsData } from '@/features/ratings/filters';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { OPEX_CRITERIA, OPEX_COUNT } from './criteria';
+import { TEAMS, type TeamKey } from './teams';
 
 /** `teacherId` is 'all' until a teacher has been picked from the dropdown. */
-type Entry = { key: string; teacherId: string; scores: (number | null)[]; remarks: string };
-const blank = (): Entry => ({ key: Math.random().toString(36).slice(2, 9), teacherId: 'all', scores: Array(OPEX_COUNT).fill(null), remarks: '' });
+type Entry = { key: string; teacherId: string; scores: (number | null)[]; remarks: string; strengths: string; areas: string };
+const blank = (n: number): Entry => ({ key: Math.random().toString(36).slice(2, 9), teacherId: 'all', scores: Array(n).fill(null), remarks: '', strengths: '', areas: '' });
 const todayIso = () => new Date().toLocaleDateString('en-CA');
 const done = (e: Entry) => e.teacherId !== 'all' && e.scores.every((s) => s !== null);
 const touched = (e: Entry) => e.teacherId !== 'all' || e.scores.some((s) => s !== null);
 
-export function OpexPage() {
-  return <DataGate>{() => <Body />}</DataGate>;
+/** Entry screen for the OpEx team (six questions) or the Programme team (ten classroom-observation criteria). */
+export function TeamRatingPage({ team }: { team: TeamKey }) {
+  return <DataGate>{() => <Body team={team} />}</DataGate>;
 }
+export const OpexPage = () => <TeamRatingPage team="opex" />;
+export const ProgrammeTeamPage = () => <TeamRatingPage team="programme" />;
 
-function Body() {
+function Body({ team }: { team: TeamKey }) {
+  const cfg = TEAMS[team];
+  const COUNT = cfg.criteria.length;
+  const existing = (d: typeof data) => (team === 'opex' ? d?.opex : d?.programme) ?? [];
   const { data, refresh } = useRatingsData();
   const { data: lookups } = useLookups();
   const [branch, setBranch] = useState('');
   const [rater, setRater] = useState('');
   const [ratedOn, setRatedOn] = useState(todayIso);
-  const [entries, setEntries] = useState<Entry[]>([blank()]);
+  const [entries, setEntries] = useState<Entry[]>(() => [blank(COUNT)]);
   const [replace, setReplace] = useState(true);
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ saved: number; replaced: number } | null>(null);
 
-  const branches = useMemo(() => [...new Set([...(lookups?.branches ?? []), ...(data?.batches ?? []).map((b) => b.branch), ...(data?.opex ?? []).map((o) => o.branch)])].filter((b) => b !== 'Unspecified').sort(), [lookups, data]);
-  const raters = useMemo(() => [...new Set((data?.opex ?? []).filter((o) => !branch || o.branch === branch).map((o) => o.rater).filter(Boolean))], [data, branch]);
-  /** Every teacher the app knows (student ratings and earlier OpEx ratings), with the branches they appear in. */
+  const branches = useMemo(() => [...new Set([...(lookups?.branches ?? []), ...(data?.batches ?? []).map((b) => b.branch), ...existing(data).map((o) => o.branch)])].filter((b) => b !== 'Unspecified').sort(), [lookups, data]);
+  const raters = useMemo(() => [...new Set(existing(data).filter((o) => !branch || o.branch === branch).map((o) => o.rater).filter(Boolean))], [data, branch]);
+  /** Every teacher the app knows (student ratings and earlier team ratings), with the branches they appear in. */
   const pool = useMemo(() => {
     const map = new Map<string, { name: string; branches: Set<string> }>();
     const add = (id: string, name: string, b: string) => (map.get(id) ?? map.set(id, { name, branches: new Set() }).get(id)!).branches.add(b);
     (data?.teachers ?? []).forEach((t) => map.set(t.id, { name: t.name, branches: new Set() }));
     (data?.batches ?? []).forEach((b) => add(b.teacherId, b.teacherName, b.branch));
-    (data?.opex ?? []).forEach((o) => add(o.teacherId, o.teacherName, o.branch));
+    existing(data).forEach((o) => add(o.teacherId, o.teacherName, o.branch));
     return map;
   }, [data]);
   const month = ratedOn.slice(0, 7);
@@ -56,12 +62,12 @@ function Body() {
       .map(([id, t]) => ({ value: id, label: t.branches.size ? `${t.name} · ${[...t.branches].sort().join(', ')}` : t.name }));
   const pickBranch = (b: string) => {
     setBranch(b);
-    setEntries([blank()]);
+    setEntries([blank(COUNT)]);
     setState('idle');
   };
 
   const nameOf = (e: Entry) => pool.get(e.teacherId)?.name ?? '';
-  const alreadyRated = (e: Entry) => e.teacherId !== 'all' && (data?.opex ?? []).some((o) => o.branch === branch && o.teacherId === e.teacherId && (o.date ?? '').startsWith(month));
+  const alreadyRated = (e: Entry) => e.teacherId !== 'all' && existing(data).some((o) => o.branch === branch && o.teacherId === e.teacherId && (o.date ?? '').startsWith(month));
 
   const ready = entries.filter(done);
   const partial = entries.filter((e) => touched(e) && !done(e));
@@ -74,7 +80,7 @@ function Body() {
     setState('saving');
     setError(null);
     try {
-      const res = await fetch('/api/opex', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ branch, rater, ratedOn, replaceExisting: replace, entries: ready.map((e) => ({ teacherName: nameOf(e), scores: e.scores, remarks: e.remarks })) }) });
+      const res = await fetch('/api/opex', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ team, branch, rater, ratedOn, replaceExisting: replace, entries: ready.map((e) => ({ teacherName: nameOf(e), scores: e.scores, remarks: e.remarks, strengths: e.strengths, areas: e.areas })) }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error === 'ALREADY_RATED' ? 'Some teachers were already rated this month — tick “Replace” to overwrite them.' : (json.error ?? 'Could not save.'));
       setResult(json);
@@ -86,11 +92,11 @@ function Body() {
     }
   };
 
-  if (data && !data.opexReady) {
+  if (data && !(team === 'opex' ? data.opexReady : data.programmeReady)) {
     return (
       <div className="flex flex-col gap-4">
-        <PageHeader eyebrow="Collect" title="OpEx" emphasis="rating" />
-        <p className="card p-5 text-sm">The OpEx table doesn’t exist yet. Run <code>supabase/add-opex.sql</code> in the Supabase SQL editor, then reload.</p>
+        <PageHeader eyebrow="Collect" title={cfg.title} />
+        <p className="card p-5 text-sm">The table for this rating doesn’t exist yet. Run <code>{team === 'opex' ? 'supabase/add-opex.sql' : 'supabase/add-programme-team.sql'}</code> in the Supabase SQL editor, then reload.</p>
       </div>
     );
   }
@@ -98,7 +104,7 @@ function Body() {
   if (state === 'saved' && result) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader eyebrow="Collect" title="OpEx rating" emphasis="saved" />
+        <PageHeader eyebrow="Collect" title={cfg.title} emphasis="saved" />
         <section className="card flex flex-col gap-4 p-5 sm:p-6">
           <p className="flex items-center gap-2 text-[15px] font-medium">
             <CheckCircle2 className="size-5 text-good" /> {plural(result.saved, 'teacher rating')} saved for {branch} ({ratedOn}){result.replaced ? ` — ${plural(result.replaced, 'earlier rating')} replaced` : ''}.
@@ -114,7 +120,7 @@ function Body() {
 
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader eyebrow="Collect" title="OpEx" emphasis="rating" description="OpEx / ABM / AC rate each teacher of their branch on six questions, once a month. This is separate from the students’ ratings." />
+      <PageHeader eyebrow="Collect" title={cfg.title} description={`${cfg.blurb} This is separate from the students’ ratings.`} />
 
       <section className="card grid gap-4 p-5 sm:grid-cols-3 sm:p-6">
         <label className="flex flex-col gap-1.5">
@@ -125,12 +131,12 @@ function Body() {
           </select>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-muted-foreground">Rated by (OpEx / ABM / AC)</span>
-          <input className="field" value={rater} onChange={(e) => setRater(e.target.value)} onBlur={() => setRater(formatName(rater))} list="rater-list" placeholder="e.g. Md Raju Ahmmed" />
+          <span className="text-[12.5px] font-medium text-muted-foreground">{team === 'opex' ? 'Rated by (OpEx / ABM / AC)' : 'Observed by (Programme team)'}</span>
+          <input className="field" value={rater} onChange={(e) => setRater(e.target.value)} onBlur={() => setRater(formatName(rater))} list="rater-list" placeholder={team === 'opex' ? 'e.g. Md Raju Ahmmed' : 'Your name'} />
           <datalist id="rater-list">{raters.map((r) => <option key={r} value={r} />)}</datalist>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[12.5px] font-medium text-muted-foreground">Date of this rating</span>
+          <span className="text-[12.5px] font-medium text-muted-foreground">{cfg.dateLabel}</span>
           <input type="date" className="field" value={ratedOn} max={todayIso()} onChange={(e) => setRatedOn(e.target.value)} />
         </label>
       </section>
@@ -142,13 +148,13 @@ function Body() {
             <article key={e.key} className={cn('card flex flex-col gap-3 p-4 sm:p-5', touched(e) && !done(e) && 'ring-1 ring-[color:var(--warning)]')}>
               <div className="flex flex-wrap items-center gap-3">
                 <SearchSelect label="Teacher" value={e.teacherId} onChange={(v) => set(e.key, { teacherId: v })} allLabel="Select a teacher…" searchPlaceholder="Search teachers…" options={optionsFor(e)} className="w-80" dropdownWidth="w-[26rem]" />
-                {done(e) && <span className="tabular rounded-full bg-[color-mix(in_oklab,var(--good)_18%,var(--background))] px-2.5 py-1 text-[12.5px] font-bold">Avg {fmt((e.scores as number[]).reduce((a, b) => a + b, 0) / OPEX_COUNT)}</span>}
+                {done(e) && <span className="tabular rounded-full bg-[color-mix(in_oklab,var(--good)_18%,var(--background))] px-2.5 py-1 text-[12.5px] font-bold">Avg {fmt((e.scores as number[]).reduce((a, b) => a + b, 0) / COUNT)}</span>}
                 {done(e) && alreadyRated(e) && <span className="flex items-center gap-1 text-[12.5px] text-[color:var(--critical-text)]"><AlertTriangle className="size-3.5" /> already rated this month</span>}
-                {touched(e) && !done(e) && <span className="text-[12.5px] text-muted-foreground">{e.teacherId === 'all' ? 'select a teacher' : `answer all ${OPEX_COUNT} questions`}</span>}
-                <button type="button" className="ml-auto text-muted-foreground hover:text-foreground" aria-label="Remove" onClick={() => setEntries((es) => (es.length > 1 ? es.filter((x) => x.key !== e.key) : [blank()]))}><X className="size-4" /></button>
+                {touched(e) && !done(e) && <span className="text-[12.5px] text-muted-foreground">{e.teacherId === 'all' ? 'select a teacher' : `answer all ${COUNT} questions`}</span>}
+                <button type="button" className="ml-auto text-muted-foreground hover:text-foreground" aria-label="Remove" onClick={() => setEntries((es) => (es.length > 1 ? es.filter((x) => x.key !== e.key) : [blank(COUNT)]))}><X className="size-4" /></button>
               </div>
               <div className="grid gap-x-6 gap-y-2.5 lg:grid-cols-2">
-                {OPEX_CRITERIA.map((c, q) => (
+                {cfg.criteria.map((c, q) => (
                   <div key={c.short} className="flex items-center justify-between gap-3">
                     <p className="min-w-0 text-[13px] leading-snug">
                       <span className="font-medium">{q + 1}. {c.short}</span>
@@ -164,11 +170,23 @@ function Body() {
                   </div>
                 ))}
               </div>
-              <input className="field h-9" value={e.remarks} onChange={(ev) => set(e.key, { remarks: ev.target.value })} placeholder="Remark (optional)" aria-label="Remark" />
+              {team === 'programme' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[12.5px] font-medium text-muted-foreground">Strengths (one per line)</span>
+                    <textarea className="field min-h-24 py-2" value={e.strengths} onChange={(ev) => set(e.key, { strengths: ev.target.value })} placeholder={'1. Interactive\n2. Creates inclusive opportunity'} />
+                  </label>
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[12.5px] font-medium text-muted-foreground">Areas of development (one per line)</span>
+                    <textarea className="field min-h-24 py-2" value={e.areas} onChange={(ev) => set(e.key, { areas: ev.target.value })} placeholder={'1. TTT should be decreased\n2. Should include pre-video instruction'} />
+                  </label>
+                </div>
+              )}
+              <input className="field h-9" value={e.remarks} onChange={(ev) => set(e.key, { remarks: ev.target.value })} placeholder={team === 'programme' ? 'Detailed remarks (optional)' : 'Remark (optional)'} aria-label="Remark" />
             </article>
           ))}
           <div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEntries((es) => [...es, blank()])}><Plus className="size-4" /> Add another teacher</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEntries((es) => [...es, blank(COUNT)])}><Plus className="size-4" /> Add another teacher</Button>
           </div>
 
           {clashes.length > 0 && (

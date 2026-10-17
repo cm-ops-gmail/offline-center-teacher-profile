@@ -39,8 +39,9 @@ function NotFound() {
 }
 
 function Body({ id, name, code }: { id: string; name: string; code: string | null }) {
-  const { data, filtered, filters, opexView } = useRatingsData();
+  const { data, filtered, filters, opexView, programmeView } = useRatingsData();
   const opex = opexView({ teacher: id });
+  const programme = programmeView({ teacher: id });
   const all = useMemo(() => (data?.batches ?? []).filter((b) => b.teacherId === id), [data, id]);
   const view = filtered({ teacher: id });
   const s = useMemo(() => summarize(view), [view]);
@@ -75,6 +76,7 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
       <RatingTabs
         studentCount={view.length}
         opexCount={opex.length}
+        programmeCount={programme.length}
         student={
           <>
       {view.length === 0 ? (
@@ -102,6 +104,7 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
           </>
         }
         opex={<OpexPanel rows={opex} by="entries" />}
+        programme={<OpexPanel team="programme" rows={programme} by="entries" />}
       />
     </div>
   );

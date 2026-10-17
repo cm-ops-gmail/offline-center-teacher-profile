@@ -1,4 +1,4 @@
-import { Building2, ClipboardCheck, GraduationCap, LayoutDashboard, Scale, ScanLine, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import { Building2, ClipboardCheck, Presentation, GraduationCap, LayoutDashboard, Scale, ScanLine, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { PROGRAMS } from '@/features/ratings/programs';
 
 export interface NavItem {
@@ -32,6 +32,7 @@ export const NAV: NavGroup[] = [
     category: 'Collect',
     items: [{ label: 'Upload forms', href: '/collect', icon: ScanLine },
       { label: 'OpEx rating', href: '/opex', icon: ClipboardCheck },
+      { label: 'Programme team rating', href: '/programme-team', icon: Presentation },
     ],
   },
   {

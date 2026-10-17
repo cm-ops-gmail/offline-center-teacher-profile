@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useRatings } from './api';
-import { OPEX_CRITERIA } from '@/features/opex/criteria';
+import { TEAMS, type TeamKey } from '@/features/opex/teams';
 import { applyCriterion } from './criteria';
 import { isProgramId } from './programs';
 import type { BatchRecord, OpexRating, ProgramId, Rating, RatingsPayload } from './types';
@@ -57,8 +57,10 @@ interface Ctx {
   branches: string[];
   /** OpEx ratings narrowed by Branch, Teacher, Programme (teachers who teach it) and the date range. */
   /** Which rating tab is open (`?rating=opex`). The filter bar changes with it. */
-  ratingTab: 'student' | 'opex';
+  ratingTab: 'student' | TeamKey;
+  /** OpEx / Programme-team ratings narrowed by Branch, Teacher, Programme and dates (and, on that team's own tab, member + question). */
   opexView: (lock?: { program?: ProgramId; teacher?: string }) => OpexRating[];
+  programmeView: (lock?: { program?: ProgramId; teacher?: string }) => OpexRating[];
 }
 
 const RatingsContext = createContext<Ctx | null>(null);
@@ -117,7 +119,8 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     rater: params.get('rater') ?? 'all',
     question: params.get('question') ?? 'all',
   };
-  const ratingTab: 'student' | 'opex' = params.get('rating') === 'opex' ? 'opex' : 'student';
+  const rawTab = params.get('rating');
+  const ratingTab: 'student' | TeamKey = rawTab === 'opex' || rawTab === 'programme' ? rawTab : 'student';
 
   const go = useCallback(
     (next: URLSearchParams) => {
@@ -158,26 +161,29 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     [data, program, branch, level, batch, teacher, criterion, cls, from, to],
   );
 
-  const opexView = useCallback(
-    (lock?: { program?: ProgramId; teacher?: string }) => {
+  const teamView = useCallback(
+    (team: TeamKey, lock?: { program?: ProgramId; teacher?: string }) => {
       if (!data) return [];
+      const mine = ratingTab === team; // member + question filters belong to the open tab only
       const prog = lock?.program ?? program;
       const who = lock?.teacher ?? teacher;
       const teachers = prog === 'all' ? null : new Set(data.batches.filter((b) => b.program === prog).map((b) => b.teacherId));
-      const qi = OPEX_CRITERIA.findIndex((c) => c.short === question);
-      return data.opex
-        .filter((o) => (branch === 'all' || o.branch === branch) && (who === 'all' || o.teacherId === who) && (rater === 'all' || o.rater === rater) && (!teachers || teachers.has(o.teacherId)) && (!from || (!!o.date && o.date >= from)) && (!to || (!!o.date && o.date <= to)))
+      const qi = mine ? TEAMS[team].criteria.findIndex((c) => c.short === question) : -1;
+      return (team === 'opex' ? data.opex : data.programme)
+        .filter((o) => (branch === 'all' || o.branch === branch) && (who === 'all' || o.teacherId === who) && (!mine || rater === 'all' || o.rater === rater) && (!teachers || teachers.has(o.teacherId)) && (!from || (!!o.date && o.date >= from)) && (!to || (!!o.date && o.date <= to)))
         // one question picked: every number becomes that question's score (ratings that left it blank drop out)
         .flatMap((o) => (qi < 0 ? [o] : o.scores[qi] != null ? [{ ...o, avg: o.scores[qi] as number }] : []));
     },
-    [data, program, branch, teacher, rater, question, from, to],
+    [data, ratingTab, program, branch, teacher, rater, question, from, to],
   );
+  const opexView = useCallback((lock?: { program?: ProgramId; teacher?: string }) => teamView('opex', lock), [teamView]);
+  const programmeView = useCallback((lock?: { program?: ProgramId; teacher?: string }) => teamView('programme', lock), [teamView]);
 
   const branches = useMemo(() => [...new Set((data?.batches ?? []).map((b) => b.branch))].sort(), [data]);
 
   const value = useMemo(
-    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to, rater, question }, ratingTab, setFilter, reset, batches, filtered, branches, opexView }),
-    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, rater, question, ratingTab, setFilter, reset, batches, filtered, branches, opexView],
+    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to, rater, question }, ratingTab, setFilter, reset, batches, filtered, branches, opexView, programmeView }),
+    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, rater, question, ratingTab, setFilter, reset, batches, filtered, branches, opexView, programmeView],
   );
   return <RatingsContext.Provider value={value}>{children}</RatingsContext.Provider>;
 }

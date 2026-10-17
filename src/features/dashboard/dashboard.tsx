@@ -29,9 +29,10 @@ const toRows = (groups: Group[], label: (g: Group) => BreakdownRow['label'] = (g
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
 function Body({ lockedProgram }: { lockedProgram?: ProgramId }) {
-  const { filtered, filters, setFilter, opexView } = useRatingsData();
+  const { filtered, filters, setFilter, opexView, programmeView } = useRatingsData();
   const batches = filtered({ program: lockedProgram });
   const opex = opexView({ program: lockedProgram });
+  const programme = programmeView({ program: lockedProgram });
   const s = useMemo(() => summarize(batches), [batches]);
   const def = lockedProgram ? PROGRAM_BY_ID[lockedProgram] : null;
   const cls = filters.cls;
@@ -90,6 +91,7 @@ function Body({ lockedProgram }: { lockedProgram?: ProgramId }) {
       <RatingTabs
         studentCount={s.batches}
         opexCount={opex.length}
+        programmeCount={programme.length}
         student={
           s.batches === 0 ? (
             <p className="py-16 text-center text-muted-foreground">No student ratings match these filters. Try clearing one.</p>
@@ -102,6 +104,7 @@ function Body({ lockedProgram }: { lockedProgram?: ProgramId }) {
           )
         }
         opex={<OpexPanel rows={opex} by={filters.teacher !== 'all' ? 'entries' : 'branch'} />}
+        programme={<OpexPanel team="programme" rows={programme} by={filters.teacher !== 'all' ? 'entries' : 'branch'} />}
       />
     </div>
   );

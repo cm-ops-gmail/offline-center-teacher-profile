@@ -49,9 +49,9 @@ export function DashboardFilters({ lockedProgram, lockedTeacher, hide = [] }: { 
   const showBatch = !hide.includes('batch');
   const active = (showProgram && filters.program !== 'all') || filters.branch !== 'all' || filters.level !== 'all' || (showTeacher && filters.teacher !== 'all') || (showBatch && filters.batch !== 'all') || filters.criterion !== 'all' || filters.cls !== 'all' || !!filters.from || !!filters.to;
 
-  if (ratingTab === 'opex') {
-    // OpEx tab: programme · branch · teacher · OpEx member · question · dates (no level / batch / class — OpEx has none)
-    const base = (data?.opex ?? []).filter((o) => (!lockedTeacher || o.teacherId === lockedTeacher) && (program === 'all' || mine.some((b) => b.teacherId === o.teacherId)));
+  if (ratingTab !== 'student') {
+    // OpEx / Programme-team tab: programme · branch · teacher · OpEx member · question · dates (no level / batch / class — OpEx has none)
+    const base = ((ratingTab === 'opex' ? data?.opex : data?.programme) ?? []).filter((o) => (!lockedTeacher || o.teacherId === lockedTeacher) && (program === 'all' || mine.some((b) => b.teacherId === o.teacherId)));
     const opexBranches = optionsFor(base.filter((o) => filters.teacher === 'all' || o.teacherId === filters.teacher).map((o) => o.branch), filters.branch).sort();
     const opexTeacherMap = new Map(base.filter((o) => filters.branch === 'all' || o.branch === filters.branch).map((o) => [o.teacherId, o.teacherName]));
     if (filters.teacher !== 'all' && !opexTeacherMap.has(filters.teacher)) opexTeacherMap.set(filters.teacher, (data?.teachers ?? []).find((t) => t.id === filters.teacher)?.name ?? filters.teacher);
@@ -63,7 +63,7 @@ export function DashboardFilters({ lockedProgram, lockedTeacher, hide = [] }: { 
         {showProgram && <Select label="Programme" value={filters.program} onChange={(v) => setFilter('program', v)} options={[{ value: 'all', label: 'All programmes' }, ...PROGRAMS.map((p) => ({ value: p.id, label: p.label }))]} />}
         <Select label="Branch" value={filters.branch} onChange={(v) => setFilter('branch', v)} options={[{ value: 'all', label: 'All branches' }, ...opexBranches.map((b) => ({ value: b, label: b }))]} />
         {showTeacher && <SearchSelect label="Teacher" value={filters.teacher} onChange={(v) => setFilter('teacher', v)} allLabel="All teachers" options={opexTeachers.map(([id, name]) => ({ value: id, label: name }))} className="w-56" />}
-        <OpexFilters />
+        <OpexFilters team={ratingTab} />
         <DateRange />
         {opexActive && (
           <Button variant="ghost" size="sm" onClick={reset} className="h-9 gap-1.5 text-muted-foreground">

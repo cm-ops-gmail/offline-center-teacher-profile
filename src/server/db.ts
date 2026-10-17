@@ -106,6 +106,8 @@ export interface StudentRow {
 
 export interface OpexRow {
   id: number;
+  strengths?: string;
+  areas_of_development?: string;
   instructor_name: string;
   branch: string;
   rater: string;
@@ -233,10 +235,11 @@ function parseProgram(program: ProgramDef, rows: MasterRow[], teacherIds: Map<st
 /* ------------------------------------------------------------------ */
 
 export async function loadRatings(): Promise<RatingsPayload> {
-  const [all, opexRows] = await Promise.all([
+  const [all, opexRows, programmeRows] = await Promise.all([
     selectAll<MasterRow>('master_ratings', 'select=*'),
     // the OpEx table is optional: the dashboard keeps working until it has been created
     selectAll<OpexRow>('opex_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
+    selectAll<OpexRow>('programme_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
   ]);
 
   const issues: DataIssue[] = [];
@@ -292,7 +295,7 @@ export async function loadRatings(): Promise<RatingsPayload> {
     }
   }
 
-  const opex: OpexRating[] = opexRows.rows.map((r) => {
+  const toRatings = (rows: OpexRow[]): OpexRating[] => rows.map((r) => {
     const { name } = cleanName(r.instructor_name);
     const scores = r.scores ?? [];
     const present = scores.filter((s): s is number => s !== null);
@@ -306,9 +309,12 @@ export async function loadRatings(): Promise<RatingsPayload> {
       avg: r.average_rating ?? (present.length ? Math.round(mean(present) * 100) / 100 : 0),
       date: r.rated_on,
       remarks: r.remarks,
+      strengths: r.strengths,
+      areas: r.areas_of_development,
     };
   });
 
+  const opex = toRatings(opexRows.rows);
   const ref = new URL(baseUrl()).hostname.split('.')[0];
   return {
     syncedAt: new Date().toISOString(),
@@ -320,6 +326,8 @@ export async function loadRatings(): Promise<RatingsPayload> {
     tabs: tabStats,
     opex,
     opexReady: opexRows.ready,
+    programme: toRatings(programmeRows.rows),
+    programmeReady: programmeRows.ready,
   };
 }
 

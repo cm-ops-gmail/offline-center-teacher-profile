@@ -14,14 +14,14 @@ import type { ProgramId } from '@/features/ratings/types';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-type Key = 'name' | 'batches' | 'first' | 'last' | 'rating' | 'opex';
+type Key = 'name' | 'batches' | 'first' | 'last' | 'rating' | 'opex' | 'prog';
 
 export function TeachersPage() {
   return <DataGate>{() => <Body />}</DataGate>;
 }
 
 function Body() {
-  const { batches, data, opexView } = useRatingsData();
+  const { batches, data, opexView, programmeView } = useRatingsData();
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'rating', dir: -1 });
   const codes = useMemo(() => new Map((data?.teachers ?? []).map((t) => [t.id, t.code])), [data]);
@@ -31,6 +31,11 @@ function Body() {
     opexView().forEach((o) => (by.get(o.teacherId) ?? by.set(o.teacherId, []).get(o.teacherId)!).push(o.avg));
     return new Map([...by].map(([id, xs]) => [id, xs.reduce((a, b) => a + b, 0) / xs.length]));
   }, [opexView]);
+  const progAvg = useMemo(() => {
+    const by = new Map<string, number[]>();
+    programmeView().forEach((o) => (by.get(o.teacherId) ?? by.set(o.teacherId, []).get(o.teacherId)!).push(o.avg));
+    return new Map([...by].map(([id, xs]) => [id, xs.reduce((a, b) => a + b, 0) / xs.length]));
+  }, [programmeView]);
 
   const rows = useMemo(() => {
     const list = byTeacher(batches).map((g) => ({
@@ -40,11 +45,12 @@ function Body() {
       programs: [...new Set(g.batches.map((b) => b.program))] as ProgramId[],
       ...g.summary,
       opex: opexAvg.get(g.key) ?? null,
+      prog: progAvg.get(g.key) ?? null,
       branchNames: [...new Set(g.batches.map((b) => b.branch))],
     }));
     const needle = q.trim().toLowerCase();
     const filtered = needle ? list.filter((r) => `${r.name} ${r.code ?? ''} ${r.branchNames.join(' ')}`.toLowerCase().includes(needle)) : list;
-    const val = (r: (typeof list)[number]): string | number | null => (sort.key === 'name' ? r.name : sort.key === 'batches' ? r.batches : sort.key === 'first' ? r.avgFirst : sort.key === 'last' ? r.avgLast : sort.key === 'opex' ? r.opex : r.rating);
+    const val = (r: (typeof list)[number]): string | number | null => (sort.key === 'name' ? r.name : sort.key === 'batches' ? r.batches : sort.key === 'first' ? r.avgFirst : sort.key === 'last' ? r.avgLast : sort.key === 'opex' ? r.opex : sort.key === 'prog' ? r.prog : r.rating);
     return filtered.sort((a, b) => {
       const av = val(a);
       const bv = val(b);
@@ -52,7 +58,7 @@ function Body() {
       if (bv === null) return -1;
       return (typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv))) * sort.dir;
     });
-  }, [batches, codes, opexAvg, q, sort]);
+  }, [batches, codes, opexAvg, progAvg, q, sort]);
 
   const th = (label: string, key: Key, right = true) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={cn('whitespace-nowrap px-3 py-2.5 font-medium', right && 'text-right')}>
@@ -87,12 +93,13 @@ function Body() {
                 {th('Avg Last', 'last')}
                 {th('Student rating', 'rating')}
                 {th('OpEx rating', 'opex')}
+                {th('Programme team', 'prog')}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-3 py-10 text-center text-muted-foreground">
                     No teachers match.
                   </td>
                 </tr>
@@ -121,6 +128,7 @@ function Body() {
                   <td className="tabular px-3 py-2.5 text-right">{fmt(r.avgLast)}</td>
                   <td className="tabular bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] px-3 py-2.5 text-right font-bold">{fmt(r.rating)}</td>
                   <td className="tabular px-3 py-2.5 text-right font-bold">{fmt(r.opex)}</td>
+                  <td className="tabular px-3 py-2.5 text-right font-bold">{fmt(r.prog)}</td>
                 </tr>
               ))}
             </tbody>

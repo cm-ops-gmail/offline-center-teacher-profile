@@ -68,6 +68,9 @@ export interface OpexRating {
   avg: number;
   date: string | null;
   remarks: string;
+  /** Programme team only. */
+  strengths?: string;
+  areas?: string;
 }
 
 export interface RatingsPayload {
@@ -81,4 +84,7 @@ export interface RatingsPayload {
   /** OpEx ratings (empty until supabase/add-opex.sql has been run). */
   opex: OpexRating[];
   opexReady: boolean;
+  /** Programme team (classroom observation) ratings, same shape as OpEx. */
+  programme: OpexRating[];
+  programmeReady: boolean;
 }

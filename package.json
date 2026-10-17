@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:seed": "node scripts/seed-supabase.mjs",
     "db:dates": "node scripts/assign-demo-dates.mjs",
-    "db:opex": "node scripts/seed-opex.mjs"
+    "db:opex": "node scripts/seed-opex.mjs",
+    "db:programme": "node scripts/seed-programme-team.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

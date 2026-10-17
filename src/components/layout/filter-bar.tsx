@@ -2,7 +2,7 @@
 import { FilterX } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
 import { SearchSelect } from '@/components/ui/search-select';
-import { OPEX_CRITERIA } from '@/features/opex/criteria';
+import { TEAMS, type TeamKey } from '@/features/opex/teams';
 import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS } from '@/features/ratings/programs';
 
@@ -39,14 +39,15 @@ export function DateRange() {
 }
 
 /** OpEx-tab filters: the OpEx / ABM / AC member who rated, and one of the six OpEx questions. Options follow the other filters. */
-export function OpexFilters() {
+export function OpexFilters({ team }: { team: TeamKey }) {
   const { data, filters, setFilter } = useRatingsData();
-  const rows = (data?.opex ?? []).filter((o) => (filters.branch === 'all' || o.branch === filters.branch) && (filters.teacher === 'all' || o.teacherId === filters.teacher));
+  const cfg = TEAMS[team];
+  const rows = ((team === 'opex' ? data?.opex : data?.programme) ?? []).filter((o) => (filters.branch === 'all' || o.branch === filters.branch) && (filters.teacher === 'all' || o.teacherId === filters.teacher));
   const raters = [...new Set([...rows.map((o) => o.rater).filter(Boolean), ...(filters.rater !== 'all' ? [filters.rater] : [])])].sort();
   return (
     <>
-      <SearchSelect label="OpEx member" value={filters.rater} onChange={(v) => setFilter('rater', v)} allLabel="All OpEx members" searchPlaceholder="Search OpEx members…" options={raters.map((r) => ({ value: r, label: r }))} className="w-60" dropdownWidth="w-[24rem]" />
-      <SearchSelect label="Question" value={filters.question} onChange={(v) => setFilter('question', v)} allLabel="All questions" searchPlaceholder="Search questions…" options={OPEX_CRITERIA.map((c) => ({ value: c.short, label: c.short }))} className="w-60" dropdownWidth="w-[24rem]" />
+      <SearchSelect label={cfg.who} value={filters.rater} onChange={(v) => setFilter('rater', v)} allLabel={`All ${cfg.who.toLowerCase().replace('opex', 'OpEx').replace('programme', 'Programme')}s`} searchPlaceholder={`Search ${cfg.who}s…`} options={raters.map((r) => ({ value: r, label: r }))} className="w-60" dropdownWidth="w-[24rem]" />
+      <SearchSelect label={team === 'opex' ? 'Question' : 'Criterion'} value={filters.question} onChange={(v) => setFilter('question', v)} allLabel={team === 'opex' ? 'All questions' : 'All criteria'} searchPlaceholder={team === 'opex' ? 'Search questions…' : 'Search criteria…'} options={cfg.criteria.map((c) => ({ value: c.short, label: c.short }))} className="w-60" dropdownWidth="w-[24rem]" />
     </>
   );
 }
@@ -54,7 +55,7 @@ export function OpexFilters() {
 /** One row above the content; scopes every chart, stat and table below it. */
 export function FilterBar({ show = ['program', 'branch'], lockedProgram, opexAware = false }: { show?: ('program' | 'branch' | 'level')[]; lockedProgram?: string; /** On a screen with Student / OpEx tabs: swap in the OpEx filters while the OpEx tab is open. */ opexAware?: boolean }) {
   const { filters, setFilter, reset, branches, data, ratingTab } = useRatingsData();
-  const opex = opexAware && ratingTab === 'opex';
+  const opex = opexAware && ratingTab !== 'student';
   const levels = [...new Set((data?.batches ?? []).map((b) => b.level).filter((l): l is string => !!l))];
   const active = (show.includes('program') && filters.program !== 'all') || (show.includes('branch') && filters.branch !== 'all') || (show.includes('level') && filters.level !== 'all') || !!filters.from || !!filters.to || (opex && (filters.rater !== 'all' || filters.question !== 'all'));
 
@@ -66,7 +67,7 @@ export function FilterBar({ show = ['program', 'branch'], lockedProgram, opexAwa
       )}
       {show.includes('branch') && <Select label="Branch" value={filters.branch} onChange={(v) => setFilter('branch', v)} options={[{ value: 'all', label: 'All branches' }, ...branches.map((b) => ({ value: b, label: b }))]} />}
       {!opex && show.includes('level') && levels.length > 0 && <Select label="Level" value={filters.level} onChange={(v) => setFilter('level', v)} options={[{ value: 'all', label: 'All levels' }, ...levels.map((l) => ({ value: l, label: l }))]} />}
-      {opex && <OpexFilters />}
+      {opex && <OpexFilters team={ratingTab} />}
       <DateRange />
       {active && (
         <Button variant="ghost" size="sm" onClick={reset} className="h-9 gap-1.5 text-muted-foreground">

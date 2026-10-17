@@ -17,8 +17,9 @@ export function BranchesPage() {
 }
 
 function Body() {
-  const { batches, filters, opexView } = useRatingsData();
+  const { batches, filters, opexView, programmeView } = useRatingsData();
   const opex = opexView();
+  const programme = programmeView();
   const router = useRouter();
   const groups = useMemo(() => byBranch(batches).sort((a, b) => (b.summary.rating ?? 0) - (a.summary.rating ?? 0)), [batches]);
   const programs = PROGRAMS.filter((p) => filters.program === 'all' || p.id === filters.program);
@@ -42,6 +43,7 @@ function Body() {
       <RatingTabs
         studentCount={groups.length}
         opexCount={opex.length}
+        programmeCount={programme.length}
         student={
           <>
       <section className="rise">
@@ -97,6 +99,7 @@ function Body() {
           </>
         }
         opex={<OpexPanel rows={opex} by="branch" />}
+        programme={<OpexPanel team="programme" rows={programme} by="branch" />}
       />
     </div>
   );
