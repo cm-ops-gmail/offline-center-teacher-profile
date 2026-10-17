@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useRatings } from './api';
 import { applyCriterion } from './criteria';
 import { isProgramId } from './programs';
-import type { BatchRecord, ProgramId, RatingsPayload } from './types';
+import type { BatchRecord, ProgramId, Rating, RatingsPayload } from './types';
 
 /** Which rating round to look at: both, only the First Rating rows, or only the Last Rating rows. */
 export type RatingClass = 'all' | 'first' | 'last';
@@ -18,12 +18,15 @@ export interface Filters {
   /** One criterion (e.g. "Communication Skills") to look at instead of the overall rating. */
   criterion: string | 'all';
   cls: RatingClass;
+  /** Date range (YYYY-MM-DD, inclusive); '' = open-ended. Applies to the date each First / Last Rating was given. */
+  from: string;
+  to: string;
 }
 
 type FilterKey = keyof Filters;
 
 /** URL query-string names (`cls` is called `class` in the URL). */
-const PARAM: Record<FilterKey, string> = { program: 'program', branch: 'branch', level: 'level', batch: 'batch', teacher: 'teacher', criterion: 'criterion', cls: 'class' };
+const PARAM: Record<FilterKey, string> = { program: 'program', branch: 'branch', level: 'level', batch: 'batch', teacher: 'teacher', criterion: 'criterion', cls: 'class', from: 'from', to: 'to' };
 
 /** Changing one filter invalidates the ones that depend on it (batch codes like "A1" repeat across branches and teachers). */
 const CLEARS: Partial<Record<FilterKey, FilterKey[]>> = {
@@ -58,6 +61,19 @@ export function applyClass(batches: BatchRecord[], cls: RatingClass): BatchRecor
   return batches;
 }
 
+const isDay = (v: string | null) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** Keeps only the ratings given inside the date range; a batch with none left drops out. Undated ratings never match a range. */
+export function applyDates(batches: BatchRecord[], from: string, to: string): BatchRecord[] {
+  if (!from && !to) return batches;
+  const inside = (r: Rating | null) => (r && r.date && (!from || r.date >= from) && (!to || r.date <= to) ? r : null);
+  return batches.flatMap((b) => {
+    const first = inside(b.first);
+    const last = inside(b.last);
+    return first || last ? [{ ...b, first, last }] : [];
+  });
+}
+
 /** True when a batch passes every filter except the ones listed in `skip` (used to build cascading option lists). */
 export function matches(b: BatchRecord, f: Filters, skip: FilterKey[] = []): boolean {
   const on = (k: FilterKey) => !skip.includes(k);
@@ -87,6 +103,8 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     teacher: params.get('teacher') ?? 'all',
     criterion: params.get('criterion') ?? 'all',
     cls: rawClass === 'first' || rawClass === 'last' ? rawClass : 'all',
+    from: isDay(params.get('from')) ? params.get('from')! : '',
+    to: isDay(params.get('to')) ? params.get('to')! : '',
   };
 
   const go = useCallback(
@@ -100,7 +118,7 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
   const setFilter = useCallback(
     (key: FilterKey, value: string) => {
       const next = new URLSearchParams(params.toString());
-      if (value === 'all') next.delete(PARAM[key]);
+      if (value === 'all' || value === '') next.delete(PARAM[key]);
       else next.set(PARAM[key], value);
       (CLEARS[key] ?? []).forEach((k) => next.delete(PARAM[k]));
       go(next);
@@ -114,25 +132,25 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     go(next);
   }, [params, go]);
 
-  const { program, branch, level, batch, teacher, criterion, cls } = filters;
+  const { program, branch, level, batch, teacher, criterion, cls, from, to } = filters;
 
-  const batches = useMemo(() => (data ? data.batches.filter((b) => matches(b, { program, branch, level, batch: 'all', teacher: 'all', criterion: 'all', cls: 'all' })) : []), [data, program, branch, level]);
+  const batches = useMemo(() => (data ? applyDates(data.batches.filter((b) => matches(b, { program, branch, level, batch: 'all', teacher: 'all', criterion: 'all', cls: 'all', from, to })), from, to) : []), [data, program, branch, level, from, to]);
 
   const filtered = useCallback(
     (lock?: { program?: ProgramId; teacher?: string; skip?: FilterKey[] }) => {
       if (!data) return [];
       const skip = lock?.skip ?? [];
-      const f: Filters = { program: lock?.program ?? program, branch, level, batch: skip.includes('batch') ? 'all' : batch, teacher: lock?.teacher ?? (skip.includes('teacher') ? 'all' : teacher), criterion, cls };
-      return applyCriterion(applyClass(data.batches.filter((b) => matches(b, f)), cls), criterion);
+      const f: Filters = { program: lock?.program ?? program, branch, level, batch: skip.includes('batch') ? 'all' : batch, teacher: lock?.teacher ?? (skip.includes('teacher') ? 'all' : teacher), criterion, cls, from, to };
+      return applyCriterion(applyDates(applyClass(data.batches.filter((b) => matches(b, f)), cls), from, to), criterion);
     },
-    [data, program, branch, level, batch, teacher, criterion, cls],
+    [data, program, branch, level, batch, teacher, criterion, cls, from, to],
   );
 
   const branches = useMemo(() => [...new Set((data?.batches ?? []).map((b) => b.branch))].sort(), [data]);
 
   const value = useMemo(
-    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls }, setFilter, reset, batches, filtered, branches }),
-    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, setFilter, reset, batches, filtered, branches],
+    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to }, setFilter, reset, batches, filtered, branches }),
+    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, setFilter, reset, batches, filtered, branches],
   );
   return <RatingsContext.Provider value={value}>{children}</RatingsContext.Provider>;
 }

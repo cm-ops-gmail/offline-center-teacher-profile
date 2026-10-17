@@ -1,7 +1,7 @@
 'use client';
 import { FilterX } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
-import { Select } from '@/components/layout/filter-bar';
+import { DateRange, Select } from '@/components/layout/filter-bar';
 import { SearchSelect } from '@/components/ui/search-select';
 import { criterionOptions, programTags } from '@/features/ratings/criteria';
 import { matches, useRatingsData, type RatingClass } from '@/features/ratings/filters';
@@ -47,7 +47,7 @@ export function DashboardFilters({ lockedProgram, lockedTeacher, hide = [] }: { 
   const criteria = criterionOptions(program);
   const showTeacher = !lockedTeacher && !hide.includes('teacher');
   const showBatch = !hide.includes('batch');
-  const active = (showProgram && filters.program !== 'all') || filters.branch !== 'all' || filters.level !== 'all' || (showTeacher && filters.teacher !== 'all') || (showBatch && filters.batch !== 'all') || filters.criterion !== 'all' || filters.cls !== 'all';
+  const active = (showProgram && filters.program !== 'all') || filters.branch !== 'all' || filters.level !== 'all' || (showTeacher && filters.teacher !== 'all') || (showBatch && filters.batch !== 'all') || filters.criterion !== 'all' || filters.cls !== 'all' || !!filters.from || !!filters.to;
 
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filters">
@@ -68,6 +68,7 @@ export function DashboardFilters({ lockedProgram, lockedTeacher, hide = [] }: { 
         dropdownWidth="w-[26rem]"
       />
       <Select label="Class" value={filters.cls} onChange={(v) => setFilter('cls', v)} options={CLASS_OPTIONS} />
+      <DateRange />
       {active && (
         <Button variant="ghost" size="sm" onClick={reset} className="h-9 gap-1.5 text-muted-foreground">
           <FilterX className="size-3.5" />

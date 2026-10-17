@@ -29,7 +29,7 @@ export function applyCriterion(batches: BatchRecord[], name: string | 'all'): Ba
   return batches.flatMap((b) => {
     const i = PROGRAM_BY_ID[b.program].criteria.indexOf(name);
     if (i < 0) return [];
-    const one = (r: Rating | null): Rating | null => (r && r.scores[i] != null ? { scores: [r.scores[i]], avg: r.scores[i] as number } : null);
+    const one = (r: Rating | null): Rating | null => (r && r.scores[i] != null ? { scores: [r.scores[i]], avg: r.scores[i] as number, date: r.date } : null);
     const first = one(b.first);
     const last = one(b.last);
     return first || last ? [{ ...b, first, last }] : [];

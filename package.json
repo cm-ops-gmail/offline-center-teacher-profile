@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:seed": "node scripts/seed-supabase.mjs"
+    "db:seed": "node scripts/seed-supabase.mjs",
+    "db:dates": "node scripts/assign-demo-dates.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

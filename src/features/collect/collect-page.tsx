@@ -52,6 +52,7 @@ function Body() {
   const [batch, setBatch] = useState('');
   const [teacher, setTeacher] = useState('');
   const [round, setRound] = useState<RatingRound>('first');
+  const [ratedOn, setRatedOn] = useState(() => new Date().toLocaleDateString('en-CA'));
   const def = PROGRAM_BY_ID[program];
 
   // ---- 2/3. forms ----
@@ -70,7 +71,7 @@ function Body() {
   const [saved, setSaved] = useState<PublishResult | null>(null);
   const [saveMode, setSaveMode] = useState<'add' | 'replace'>('add');
 
-  const selection = useMemo(() => ({ program, branch, level: def.hasLevel ? level || null : null, batch, teacherName: teacher.trim(), round }), [program, branch, def.hasLevel, level, batch, teacher, round]);
+  const selection = useMemo(() => ({ program, branch, level: def.hasLevel ? level || null : null, batch, teacherName: teacher.trim(), round, ratedOn }), [program, branch, def.hasLevel, level, batch, teacher, round, ratedOn]);
   const detailsReady = Boolean(branch && batch.trim() && teacher.trim() && (!def.hasLevel || level));
 
   const teacherNames = useMemo(() => (data?.teachers ?? []).map((t) => t.sheetName), [data]);
@@ -324,6 +325,9 @@ function Body() {
                 </button>
               ))}
             </div>
+          </Field>
+          <Field label="Date of this rating">
+            <input type="date" className="field" value={ratedOn} max={new Date().toLocaleDateString('en-CA')} onChange={(e) => { setRatedOn(e.target.value); resetPlan(); }} />
           </Field>
         </div>
       </Step>

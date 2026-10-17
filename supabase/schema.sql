@@ -13,6 +13,8 @@ create table if not exists master_ratings (
   scores          numeric[] not null,
   average_rating  numeric,
   remarks         text not null default '',
+  -- the day this rating (first or last) was given
+  rated_on        date,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -33,7 +35,8 @@ create table if not exists student_responses (
   form_date       text not null default '',
   source_file     text not null default '',
   submitted_at    timestamptz not null default now(),
-  submission_id   text not null default ''
+  submission_id   text not null default '',
+  rated_on        date
 );
 create index if not exists student_responses_program_idx on student_responses (program, class);
 

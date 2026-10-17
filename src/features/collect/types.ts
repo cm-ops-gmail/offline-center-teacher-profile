@@ -33,6 +33,8 @@ export interface Selection {
   /** Teacher exactly as it should appear in the master sheet, e.g. "LCI004 - SIRAZUM MUNIRA". */
   teacherName: string;
   round: RatingRound;
+  /** The day the rating was given, YYYY-MM-DD (defaults to today). */
+  ratedOn?: string;
 }
 
 export interface Aggregate {

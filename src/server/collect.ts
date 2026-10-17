@@ -49,20 +49,24 @@ function sameBatch(r: { instructor_name: string; branch: string; level: string |
 
 /** Columns of a programme's student rows, in display order (used for the read-back grid). */
 export function responseHeaders(def: ProgramDef): string[] {
-  return ['instructor_name', 'branch', ...(def.hasLevel ? ['level'] : []), 'batch', 'class', 'Users Rated', ...def.criteria, 'Average Rating', 'Feedback', 'Form date', 'Source file', 'submitted_at', 'submission_id'];
+  return ['instructor_name', 'branch', ...(def.hasLevel ? ['level'] : []), 'batch', 'class', 'Users Rated', ...def.criteria, 'Average Rating', 'Feedback', 'Form date', 'Source file', 'submitted_at', 'submission_id', 'Rating date'];
 }
 export function masterHeaders(def: ProgramDef): string[] {
-  return ['instructor_name', 'branch', ...(def.hasLevel ? ['level'] : []), 'batch', 'class', ...def.criteria, 'Average Rating', 'Remarks'];
+  return ['instructor_name', 'branch', ...(def.hasLevel ? ['level'] : []), 'batch', 'class', ...def.criteria, 'Average Rating', 'Remarks', 'Rating date'];
 }
+
+/** Today in Bangladesh (the centre's timezone), as YYYY-MM-DD. */
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+const ratedOnOf = (sel: Selection) => (sel.ratedOn && /^\d{4}-\d{2}-\d{2}$/.test(sel.ratedOn) && !Number.isNaN(Date.parse(sel.ratedOn)) ? sel.ratedOn : today());
 
 const cellText = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function studentCells(def: ProgramDef, r: StudentRow): string[] {
-  return [r.instructor_name, r.branch, ...(def.hasLevel ? [r.level ?? ''] : []), r.batch, ROUND_LABEL[r.class], cellText(r.users_rated), ...def.criteria.map((_, i) => cellText(r.scores?.[i])), cellText(r.average_rating), r.feedback, r.form_date, r.source_file, r.submitted_at, r.submission_id];
+  return [r.instructor_name, r.branch, ...(def.hasLevel ? [r.level ?? ''] : []), r.batch, ROUND_LABEL[r.class], cellText(r.users_rated), ...def.criteria.map((_, i) => cellText(r.scores?.[i])), cellText(r.average_rating), r.feedback, r.form_date, r.source_file, r.submitted_at, r.submission_id, cellText(r.rated_on)];
 }
 function masterCells(def: ProgramDef, r: MasterRow): string[] {
-  return [r.instructor_name, r.branch, ...(def.hasLevel ? [r.level ?? ''] : []), r.batch, ROUND_LABEL[r.class], ...def.criteria.map((_, i) => cellText(r.scores?.[i])), cellText(r.average_rating), r.remarks];
+  return [r.instructor_name, r.branch, ...(def.hasLevel ? [r.level ?? ''] : []), r.batch, ROUND_LABEL[r.class], ...def.criteria.map((_, i) => cellText(r.scores?.[i])), cellText(r.average_rating), r.remarks, cellText(r.rated_on)];
 }
 
 interface Ctx {
@@ -198,6 +202,7 @@ export async function publish(input: PublishInput): Promise<PublishResult> {
   const { sel, def } = c;
   const submissionId = `sub_${Date.now().toString(36)}`;
   const now = new Date().toISOString();
+  const ratedOn = ratedOnOf(sel);
   const identity = { program: sel.program, instructor_name: sel.teacherName, branch: sel.branch, level: def.hasLevel ? (sel.level ?? '') : null, batch: sel.batch, class: sel.round };
 
   /* ---- 1. a re-upload replaces this batch's earlier student rows ---- */
@@ -219,6 +224,7 @@ export async function publish(input: PublishInput): Promise<PublishResult> {
         source_file: r.source,
         submitted_at: now,
         submission_id: submissionId,
+        rated_on: ratedOn,
       })),
     ),
   });
@@ -226,10 +232,10 @@ export async function publish(input: PublishInput): Promise<PublishResult> {
   /* ---- 3. the batch average: update the existing row's scores, or add a new row ---- */
   let masterRow: MasterRow;
   if (c.masterId !== null) {
-    const [row] = await rest<MasterRow[]>(`master_ratings?id=eq.${c.masterId}`, { method: 'PATCH', prefer: 'return=representation', body: JSON.stringify({ ...identity, scores: c.critValues, average_rating: c.average, updated_at: now }) });
+    const [row] = await rest<MasterRow[]>(`master_ratings?id=eq.${c.masterId}`, { method: 'PATCH', prefer: 'return=representation', body: JSON.stringify({ ...identity, scores: c.critValues, average_rating: c.average, rated_on: ratedOn, updated_at: now }) });
     masterRow = row;
   } else {
-    const [row] = await rest<MasterRow[]>('master_ratings', { method: 'POST', prefer: 'return=representation', body: JSON.stringify({ ...identity, scores: c.critValues, average_rating: c.average, remarks: '' }) });
+    const [row] = await rest<MasterRow[]>('master_ratings', { method: 'POST', prefer: 'return=representation', body: JSON.stringify({ ...identity, scores: c.critValues, average_rating: c.average, remarks: '', rated_on: ratedOn }) });
     masterRow = row;
   }
   clearRatingsCache();

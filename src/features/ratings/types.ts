@@ -6,6 +6,8 @@ export interface Rating {
   scores: (number | null)[];
   /** The sheet's own "Average Rating" (falls back to the mean of the scores). */
   avg: number;
+  /** The day this rating was given (YYYY-MM-DD), null if unknown. */
+  date: string | null;
 }
 
 /** One teacher × branch × batch, with its first and last rating when available. */

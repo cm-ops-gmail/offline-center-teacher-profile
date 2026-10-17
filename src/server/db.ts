@@ -82,6 +82,7 @@ export interface MasterRow {
   scores: (number | null)[];
   average_rating: number | null;
   remarks: string;
+  rated_on: string | null;
 }
 
 export interface StudentRow {
@@ -100,6 +101,7 @@ export interface StudentRow {
   source_file: string;
   submitted_at: string;
   submission_id: string;
+  rated_on: string | null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -181,7 +183,7 @@ function parseProgram(program: ProgramDef, rows: MasterRow[], teacherIds: Map<st
     if (!row.branch.trim()) missingBranch++;
     const level = program.hasLevel ? row.level?.trim() || null : null;
     const batch = row.batch.trim() || '—';
-    const rating: Rating = { scores, avg };
+    const rating: Rating = { scores, avg, date: row.rated_on };
     const remark = row.remarks.trim();
 
     const groupKey = [key, branch, level ?? '', batch].join('|');
