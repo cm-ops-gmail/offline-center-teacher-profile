@@ -1,6 +1,6 @@
 import 'server-only';
 import { PROGRAMS } from '@/features/ratings/programs';
-import type { BatchRecord, DataIssue, ProgramId, Rating, RatingsPayload, Teacher } from '@/features/ratings/types';
+import type { BatchRecord, DataIssue, OpexRating, ProgramId, Rating, RatingsPayload, Teacher } from '@/features/ratings/types';
 import type { ProgramDef } from '@/features/ratings/programs';
 
 /* ------------------------------------------------------------------ *
@@ -101,6 +101,17 @@ export interface StudentRow {
   source_file: string;
   submitted_at: string;
   submission_id: string;
+  rated_on: string | null;
+}
+
+export interface OpexRow {
+  id: number;
+  instructor_name: string;
+  branch: string;
+  rater: string;
+  scores: (number | null)[];
+  average_rating: number | null;
+  remarks: string;
   rated_on: string | null;
 }
 
@@ -222,7 +233,11 @@ function parseProgram(program: ProgramDef, rows: MasterRow[], teacherIds: Map<st
 /* ------------------------------------------------------------------ */
 
 export async function loadRatings(): Promise<RatingsPayload> {
-  const all = await selectAll<MasterRow>('master_ratings', 'select=*');
+  const [all, opexRows] = await Promise.all([
+    selectAll<MasterRow>('master_ratings', 'select=*'),
+    // the OpEx table is optional: the dashboard keeps working until it has been created
+    selectAll<OpexRow>('opex_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
+  ]);
 
   const issues: DataIssue[] = [];
   const teacherIds = new Map<string, string>();
@@ -277,6 +292,23 @@ export async function loadRatings(): Promise<RatingsPayload> {
     }
   }
 
+  const opex: OpexRating[] = opexRows.rows.map((r) => {
+    const { name } = cleanName(r.instructor_name);
+    const scores = r.scores ?? [];
+    const present = scores.filter((s): s is number => s !== null);
+    return {
+      id: r.id,
+      teacherId: teacherIds.get(teacherKey(name)) ?? (slug(name) || teacherKey(name)),
+      teacherName: names.get(teacherKey(name)) ?? name,
+      branch: r.branch.trim() || 'Unspecified',
+      rater: r.rater,
+      scores,
+      avg: r.average_rating ?? (present.length ? Math.round(mean(present) * 100) / 100 : 0),
+      date: r.rated_on,
+      remarks: r.remarks,
+    };
+  });
+
   const ref = new URL(baseUrl()).hostname.split('.')[0];
   return {
     syncedAt: new Date().toISOString(),
@@ -286,6 +318,8 @@ export async function loadRatings(): Promise<RatingsPayload> {
     teachers,
     issues,
     tabs: tabStats,
+    opex,
+    opexReady: opexRows.ready,
   };
 }
 

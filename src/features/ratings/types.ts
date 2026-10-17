@@ -56,6 +56,20 @@ export interface TabStats {
   teachers: number;
 }
 
+/** One monthly rating of a teacher by the OpEx / ABM / AC team (six questions, scored 1–5). */
+export interface OpexRating {
+  id: number;
+  /** Same id as the teacher's student ratings when the name matches, otherwise a slug of the name. */
+  teacherId: string;
+  teacherName: string;
+  branch: string;
+  rater: string;
+  scores: (number | null)[];
+  avg: number;
+  date: string | null;
+  remarks: string;
+}
+
 export interface RatingsPayload {
   syncedAt: string;
   sheetTitle: string;
@@ -64,4 +78,7 @@ export interface RatingsPayload {
   teachers: Teacher[];
   issues: DataIssue[];
   tabs: TabStats[];
+  /** OpEx ratings (empty until supabase/add-opex.sql has been run). */
+  opex: OpexRating[];
+  opexReady: boolean;
 }

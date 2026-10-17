@@ -8,6 +8,7 @@ import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { byBranch, summarize } from '@/features/ratings/analytics';
 import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS } from '@/features/ratings/programs';
+import { OpexPanel } from '@/features/opex/opex-panel';
 import { fmt, plural } from '@/lib/format';
 
 export function BranchesPage() {
@@ -15,7 +16,8 @@ export function BranchesPage() {
 }
 
 function Body() {
-  const { batches, filters } = useRatingsData();
+  const { batches, filters, opexView } = useRatingsData();
+  const opex = opexView();
   const router = useRouter();
   const groups = useMemo(() => byBranch(batches).sort((a, b) => (b.summary.rating ?? 0) - (a.summary.rating ?? 0)), [batches]);
   const programs = PROGRAMS.filter((p) => filters.program === 'all' || p.id === filters.program);
@@ -86,6 +88,8 @@ function Body() {
           </table>
         </div>
       </section>
+
+      <OpexPanel rows={opex} by="branch" />
     </div>
   );
 }

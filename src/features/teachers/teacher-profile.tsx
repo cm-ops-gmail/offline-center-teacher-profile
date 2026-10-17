@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { Monogram, ProgramChip, SectionTitle } from '@/components/ui/primitives';
+import { OpexPanel } from '@/features/opex/opex-panel';
 import { Detail, Kpis } from '@/features/dashboard/dashboard';
 import { DashboardFilters } from '@/features/programs/dashboard-filters';
 import { summarize } from '@/features/ratings/analytics';
@@ -37,7 +38,8 @@ function NotFound() {
 }
 
 function Body({ id, name, code }: { id: string; name: string; code: string | null }) {
-  const { data, filtered, filters } = useRatingsData();
+  const { data, filtered, filters, opexView } = useRatingsData();
+  const opex = opexView({ teacher: id });
   const all = useMemo(() => (data?.batches ?? []).filter((b) => b.teacherId === id), [data, id]);
   const view = filtered({ teacher: id });
   const s = useMemo(() => summarize(view), [view]);
@@ -73,10 +75,13 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
         <p className="py-16 text-center text-muted-foreground">No ratings match these filters. Try clearing one.</p>
       ) : (
         <>
+          <SectionTitle title="Student rating" hint="Given by students on the paper forms, per batch." />
           <Kpis s={s} batches={view} cls={filters.cls} round={round} />
           <Detail batches={view} cls={filters.cls} showProgramTitles showTeacher={false} />
         </>
       )}
+
+      <OpexPanel rows={opex} by="entries" />
 
       {remarks.length > 0 && (
         <section className="rise card p-5 sm:p-6">

@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:seed": "node scripts/seed-supabase.mjs",
-    "db:dates": "node scripts/assign-demo-dates.mjs"
+    "db:dates": "node scripts/assign-demo-dates.mjs",
+    "db:opex": "node scripts/seed-opex.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

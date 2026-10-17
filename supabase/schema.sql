@@ -59,3 +59,20 @@ drop policy if exists app_all on lookups;
 create policy app_all on master_ratings    for all to anon using (true) with check (true);
 create policy app_all on student_responses for all to anon using (true) with check (true);
 create policy app_all on lookups           for all to anon using (true) with check (true);
+
+-- OpEx ratings of teachers (also in supabase/add-opex.sql for databases created before this table existed)
+create table if not exists opex_ratings (
+  id              bigint generated always as identity primary key,
+  instructor_name text not null,
+  branch          text not null default '',
+  rater           text not null default '',
+  scores          numeric[] not null,
+  average_rating  numeric,
+  remarks         text not null default '',
+  rated_on        date not null default current_date,
+  created_at      timestamptz not null default now()
+);
+create index if not exists opex_ratings_rated_on_idx on opex_ratings (rated_on);
+alter table opex_ratings enable row level security;
+drop policy if exists app_all on opex_ratings;
+create policy app_all on opex_ratings for all to anon using (true) with check (true);

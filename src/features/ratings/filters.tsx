@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useRatings } from './api';
 import { applyCriterion } from './criteria';
 import { isProgramId } from './programs';
-import type { BatchRecord, ProgramId, Rating, RatingsPayload } from './types';
+import type { BatchRecord, OpexRating, ProgramId, Rating, RatingsPayload } from './types';
 
 /** Which rating round to look at: both, only the First Rating rows, or only the Last Rating rows. */
 export type RatingClass = 'all' | 'first' | 'last';
@@ -50,6 +50,8 @@ interface Ctx {
   /** Every filter applied (programme optionally fixed by the screen), with the Class filter already applied. */
   filtered: (lock?: { program?: ProgramId; teacher?: string; /** filters to ignore (the comparison screen ignores Teacher and Batch) */ skip?: FilterKey[] }) => BatchRecord[];
   branches: string[];
+  /** OpEx ratings narrowed by Branch, Teacher, Programme (teachers who teach it) and the date range. */
+  opexView: (lock?: { program?: ProgramId; teacher?: string }) => OpexRating[];
 }
 
 const RatingsContext = createContext<Ctx | null>(null);
@@ -146,11 +148,24 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     [data, program, branch, level, batch, teacher, criterion, cls, from, to],
   );
 
+  const opexView = useCallback(
+    (lock?: { program?: ProgramId; teacher?: string }) => {
+      if (!data) return [];
+      const prog = lock?.program ?? program;
+      const who = lock?.teacher ?? teacher;
+      const teachers = prog === 'all' ? null : new Set(data.batches.filter((b) => b.program === prog).map((b) => b.teacherId));
+      return data.opex.filter(
+        (o) => (branch === 'all' || o.branch === branch) && (who === 'all' || o.teacherId === who) && (!teachers || teachers.has(o.teacherId)) && (!from || (!!o.date && o.date >= from)) && (!to || (!!o.date && o.date <= to)),
+      );
+    },
+    [data, program, branch, teacher, from, to],
+  );
+
   const branches = useMemo(() => [...new Set((data?.batches ?? []).map((b) => b.branch))].sort(), [data]);
 
   const value = useMemo(
-    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to }, setFilter, reset, batches, filtered, branches }),
-    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, setFilter, reset, batches, filtered, branches],
+    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to }, setFilter, reset, batches, filtered, branches, opexView }),
+    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, setFilter, reset, batches, filtered, branches, opexView],
   );
   return <RatingsContext.Provider value={value}>{children}</RatingsContext.Provider>;
 }
