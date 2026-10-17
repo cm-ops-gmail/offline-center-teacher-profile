@@ -8,6 +8,7 @@ import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { byBranch, summarize } from '@/features/ratings/analytics';
 import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS } from '@/features/ratings/programs';
+import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { fmt, plural } from '@/lib/format';
 
@@ -38,6 +39,11 @@ function Body() {
       <PageHeader eyebrow="Centres" title="Branch" emphasis="comparison" description={`${plural(groups.length, 'branch', 'branches')} in view. Small branches have few batches, so read their averages with care. Click a branch to see its ratings.`} />
       <FilterBar show={['program']} />
 
+      <RatingTabs
+        studentCount={groups.length}
+        opexCount={opex.length}
+        student={
+          <>
       <section className="rise">
         <SectionTitle title="Average Rating by branch" hint="Each batch’s rating (First and Last averaged), added up and divided by the number of batches." />
         <BreakdownTable
@@ -88,8 +94,10 @@ function Body() {
           </table>
         </div>
       </section>
-
-      <OpexPanel rows={opex} by="branch" />
+          </>
+        }
+        opex={<OpexPanel rows={opex} by="branch" />}
+      />
     </div>
   );
 }

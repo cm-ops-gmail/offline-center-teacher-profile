@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { Monogram, ProgramChip, SectionTitle } from '@/components/ui/primitives';
+import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { Detail, Kpis } from '@/features/dashboard/dashboard';
 import { DashboardFilters } from '@/features/programs/dashboard-filters';
@@ -71,6 +72,11 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
 
       <DashboardFilters lockedTeacher={id} />
 
+      <RatingTabs
+        studentCount={view.length}
+        opexCount={opex.length}
+        student={
+          <>
       {view.length === 0 ? (
         <p className="py-16 text-center text-muted-foreground">No ratings match these filters. Try clearing one.</p>
       ) : (
@@ -80,8 +86,6 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
           <Detail batches={view} cls={filters.cls} showProgramTitles showTeacher={false} />
         </>
       )}
-
-      <OpexPanel rows={opex} by="entries" />
 
       {remarks.length > 0 && (
         <section className="rise card p-5 sm:p-6">
@@ -95,6 +99,10 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
           </ul>
         </section>
       )}
+          </>
+        }
+        opex={<OpexPanel rows={opex} by="entries" />}
+      />
     </div>
   );
 }

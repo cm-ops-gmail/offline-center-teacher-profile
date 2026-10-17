@@ -15,6 +15,7 @@ import { summarize } from '@/features/ratings/analytics';
 import { BatchTable } from '@/features/programs/batch-table';
 import { DashboardFilters } from '@/features/programs/dashboard-filters';
 import { TeacherComparison } from '@/features/compare/teacher-comparison';
+import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
 import { BatchesInfo, RatingInfo, RoundInfo } from './kpi-info';
 
@@ -86,16 +87,22 @@ function Body({ lockedProgram }: { lockedProgram?: ProgramId }) {
       />
       <DashboardFilters lockedProgram={lockedProgram} />
 
-      {s.batches === 0 ? (
-        <p className="py-16 text-center text-muted-foreground">No student ratings match these filters. Try clearing one.</p>
-      ) : (
-        <>
-          <SectionTitle title="Student rating" hint="Given by students on the paper forms, per batch." />
-          <Kpis s={s} batches={batches} cls={cls} round={round} />
-          {drilled ? <Detail batches={batches} cls={cls} showProgramTitles={!lockedProgram} /> : <Averages batches={batches} lockedProgram={lockedProgram} onPick={setFilter} />}
-        </>
-      )}
-      <OpexPanel rows={opex} by={filters.teacher !== 'all' ? 'entries' : 'branch'} />
+      <RatingTabs
+        studentCount={s.batches}
+        opexCount={opex.length}
+        student={
+          s.batches === 0 ? (
+            <p className="py-16 text-center text-muted-foreground">No student ratings match these filters. Try clearing one.</p>
+          ) : (
+            <>
+              <SectionTitle title="Student rating" hint="Given by students on the paper forms, per batch." />
+              <Kpis s={s} batches={batches} cls={cls} round={round} />
+              {drilled ? <Detail batches={batches} cls={cls} showProgramTitles={!lockedProgram} /> : <Averages batches={batches} lockedProgram={lockedProgram} onPick={setFilter} />}
+            </>
+          )
+        }
+        opex={<OpexPanel rows={opex} by={filters.teacher !== 'all' ? 'entries' : 'branch'} />}
+      />
     </div>
   );
 }
