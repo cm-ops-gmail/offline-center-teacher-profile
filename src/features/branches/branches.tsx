@@ -37,7 +37,7 @@ function Body() {
   return (
     <div className="flex flex-col gap-7">
       <PageHeader eyebrow="Centres" title="Branch" emphasis="comparison" description={`${plural(groups.length, 'branch', 'branches')} in view. Small branches have few batches, so read their averages with care. Click a branch to see its ratings.`} />
-      <FilterBar show={['program']} />
+      <FilterBar show={['program']} opexAware />
 
       <RatingTabs
         studentCount={groups.length}

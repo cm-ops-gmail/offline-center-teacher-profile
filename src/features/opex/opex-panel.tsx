@@ -1,6 +1,7 @@
 'use client';
 import { useMemo } from 'react';
 import { SectionTitle, StatTile } from '@/components/ui/primitives';
+import { useRatingsData } from '@/features/ratings/filters';
 import { sheet } from '@/components/ui/sheet-table';
 import type { OpexRating } from '@/features/ratings/types';
 import { fmt, plural } from '@/lib/format';
@@ -17,6 +18,9 @@ const day = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00`).toLocaleD
  * a breakdown by branch (`by="branch"`) or every individual rating (`by="entries"`).
  */
 export function OpexPanel({ rows, by, title = 'OpEx rating' }: { rows: OpexRating[]; by: 'branch' | 'entries'; title?: string }) {
+  const { filters } = useRatingsData();
+  const only = OPEX_CRITERIA.findIndex((c) => c.short === filters.question); // -1 = all six questions
+  const shown = OPEX_CRITERIA.map((c, i) => ({ c, i })).filter(({ i }) => only < 0 || i === only);
   const avg = opexAverage(rows);
   const crit = useMemo(() => criterionAverages(rows), [rows]);
   const branches = useMemo(() => {
@@ -34,7 +38,7 @@ export function OpexPanel({ rows, by, title = 'OpEx rating' }: { rows: OpexRatin
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatTile hero label="OpEx Average Rating" value={fmt(avg)} sub="Out of 5" />
+            <StatTile hero label={only >= 0 ? `OpEx · ${OPEX_CRITERIA[only].short}` : 'OpEx Average Rating'} value={fmt(avg)} sub="Out of 5" />
             <StatTile label="Ratings" value={rows.length} sub={`${plural(new Set(rows.map((r) => r.teacherId)).size, 'teacher')}`} />
             <StatTile label="Branches" value={branches.length} sub="In this view" />
           </div>
@@ -48,7 +52,7 @@ export function OpexPanel({ rows, by, title = 'OpEx rating' }: { rows: OpexRatin
                 </tr>
               </thead>
               <tbody>
-                {OPEX_CRITERIA.map((c, i) => (
+                {shown.map(({ c, i }) => (
                   <tr key={c.short} className="border-t border-border/70">
                     <td className="px-3 py-2.5" title={c.question}>{c.short}</td>
                     <td className="w-64 px-3 py-2.5">
@@ -96,10 +100,10 @@ export function OpexPanel({ rows, by, title = 'OpEx rating' }: { rows: OpexRatin
                     <th className={`${sheet.th} text-left`}>Date</th>
                     <th className={`${sheet.th} text-left`}>Branch</th>
                     <th className={`${sheet.th} text-left`}>Rated by</th>
-                    {OPEX_CRITERIA.map((c) => (
+                    {shown.map(({ c }) => (
                       <th key={c.short} className={sheet.th} title={c.question}>{c.short}</th>
                     ))}
-                    <th className={sheet.thAvg}>Average</th>
+                    <th className={sheet.thAvg}>{only >= 0 ? 'Score' : 'Average'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -108,7 +112,7 @@ export function OpexPanel({ rows, by, title = 'OpEx rating' }: { rows: OpexRatin
                       <td className="whitespace-nowrap px-3 py-2.5">{day(r.date)}</td>
                       <td className="px-3 py-2.5 text-muted-foreground">{r.branch}</td>
                       <td className="px-3 py-2.5 text-muted-foreground">{r.rater || '—'}</td>
-                      {OPEX_CRITERIA.map((_, i) => (
+                      {shown.map(({ i }) => (
                         <td key={i} className={sheet.td}>{r.scores[i] ?? '—'}</td>
                       ))}
                       <td className={`${sheet.tdAvg} text-[15px]`}>{fmt(r.avg)}</td>

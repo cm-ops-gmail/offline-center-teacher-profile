@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useRatings } from './api';
+import { OPEX_CRITERIA } from '@/features/opex/criteria';
 import { applyCriterion } from './criteria';
 import { isProgramId } from './programs';
 import type { BatchRecord, OpexRating, ProgramId, Rating, RatingsPayload } from './types';
@@ -21,12 +22,16 @@ export interface Filters {
   /** Date range (YYYY-MM-DD, inclusive); '' = open-ended. Applies to the date each First / Last Rating was given. */
   from: string;
   to: string;
+  /** OpEx tab only: the OpEx / ABM / AC member who gave the rating. */
+  rater: string | 'all';
+  /** OpEx tab only: one of the six OpEx questions (by its short name) instead of the overall rating. */
+  question: string | 'all';
 }
 
 type FilterKey = keyof Filters;
 
 /** URL query-string names (`cls` is called `class` in the URL). */
-const PARAM: Record<FilterKey, string> = { program: 'program', branch: 'branch', level: 'level', batch: 'batch', teacher: 'teacher', criterion: 'criterion', cls: 'class', from: 'from', to: 'to' };
+const PARAM: Record<FilterKey, string> = { program: 'program', branch: 'branch', level: 'level', batch: 'batch', teacher: 'teacher', criterion: 'criterion', cls: 'class', from: 'from', to: 'to', rater: 'rater', question: 'question' };
 
 /** Changing one filter invalidates the ones that depend on it (batch codes like "A1" repeat across branches and teachers). */
 const CLEARS: Partial<Record<FilterKey, FilterKey[]>> = {
@@ -51,6 +56,8 @@ interface Ctx {
   filtered: (lock?: { program?: ProgramId; teacher?: string; /** filters to ignore (the comparison screen ignores Teacher and Batch) */ skip?: FilterKey[] }) => BatchRecord[];
   branches: string[];
   /** OpEx ratings narrowed by Branch, Teacher, Programme (teachers who teach it) and the date range. */
+  /** Which rating tab is open (`?rating=opex`). The filter bar changes with it. */
+  ratingTab: 'student' | 'opex';
   opexView: (lock?: { program?: ProgramId; teacher?: string }) => OpexRating[];
 }
 
@@ -107,7 +114,10 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     cls: rawClass === 'first' || rawClass === 'last' ? rawClass : 'all',
     from: isDay(params.get('from')) ? params.get('from')! : '',
     to: isDay(params.get('to')) ? params.get('to')! : '',
+    rater: params.get('rater') ?? 'all',
+    question: params.get('question') ?? 'all',
   };
+  const ratingTab: 'student' | 'opex' = params.get('rating') === 'opex' ? 'opex' : 'student';
 
   const go = useCallback(
     (next: URLSearchParams) => {
@@ -134,15 +144,15 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     go(next);
   }, [params, go]);
 
-  const { program, branch, level, batch, teacher, criterion, cls, from, to } = filters;
+  const { program, branch, level, batch, teacher, criterion, cls, from, to, rater, question } = filters;
 
-  const batches = useMemo(() => (data ? applyDates(data.batches.filter((b) => matches(b, { program, branch, level, batch: 'all', teacher: 'all', criterion: 'all', cls: 'all', from, to })), from, to) : []), [data, program, branch, level, from, to]);
+  const batches = useMemo(() => (data ? applyDates(data.batches.filter((b) => matches(b, { program, branch, level, batch: 'all', teacher: 'all', criterion: 'all', cls: 'all', from, to, rater: 'all', question: 'all' })), from, to) : []), [data, program, branch, level, from, to]);
 
   const filtered = useCallback(
     (lock?: { program?: ProgramId; teacher?: string; skip?: FilterKey[] }) => {
       if (!data) return [];
       const skip = lock?.skip ?? [];
-      const f: Filters = { program: lock?.program ?? program, branch, level, batch: skip.includes('batch') ? 'all' : batch, teacher: lock?.teacher ?? (skip.includes('teacher') ? 'all' : teacher), criterion, cls, from, to };
+      const f: Filters = { program: lock?.program ?? program, branch, level, batch: skip.includes('batch') ? 'all' : batch, teacher: lock?.teacher ?? (skip.includes('teacher') ? 'all' : teacher), criterion, cls, from, to, rater: 'all', question: 'all' };
       return applyCriterion(applyDates(applyClass(data.batches.filter((b) => matches(b, f)), cls), from, to), criterion);
     },
     [data, program, branch, level, batch, teacher, criterion, cls, from, to],
@@ -154,18 +164,20 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
       const prog = lock?.program ?? program;
       const who = lock?.teacher ?? teacher;
       const teachers = prog === 'all' ? null : new Set(data.batches.filter((b) => b.program === prog).map((b) => b.teacherId));
-      return data.opex.filter(
-        (o) => (branch === 'all' || o.branch === branch) && (who === 'all' || o.teacherId === who) && (!teachers || teachers.has(o.teacherId)) && (!from || (!!o.date && o.date >= from)) && (!to || (!!o.date && o.date <= to)),
-      );
+      const qi = OPEX_CRITERIA.findIndex((c) => c.short === question);
+      return data.opex
+        .filter((o) => (branch === 'all' || o.branch === branch) && (who === 'all' || o.teacherId === who) && (rater === 'all' || o.rater === rater) && (!teachers || teachers.has(o.teacherId)) && (!from || (!!o.date && o.date >= from)) && (!to || (!!o.date && o.date <= to)))
+        // one question picked: every number becomes that question's score (ratings that left it blank drop out)
+        .flatMap((o) => (qi < 0 ? [o] : o.scores[qi] != null ? [{ ...o, avg: o.scores[qi] as number }] : []));
     },
-    [data, program, branch, teacher, from, to],
+    [data, program, branch, teacher, rater, question, from, to],
   );
 
   const branches = useMemo(() => [...new Set((data?.batches ?? []).map((b) => b.branch))].sort(), [data]);
 
   const value = useMemo(
-    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to }, setFilter, reset, batches, filtered, branches, opexView }),
-    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, setFilter, reset, batches, filtered, branches, opexView],
+    () => ({ data, error, isLoading, isValidating, refresh, filters: { program, branch, level, batch, teacher, criterion, cls, from, to, rater, question }, ratingTab, setFilter, reset, batches, filtered, branches, opexView }),
+    [data, error, isLoading, isValidating, refresh, program, branch, level, batch, teacher, criterion, cls, from, to, rater, question, ratingTab, setFilter, reset, batches, filtered, branches, opexView],
   );
   return <RatingsContext.Provider value={value}>{children}</RatingsContext.Provider>;
 }
