@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Check, CheckCircle2, FileText, Loader2, Plus, RotateCcw, Trash2, UploadCloud, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, FileText, Loader2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { Button, Input } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { PageHeader, Pill, SectionTitle } from '@/components/ui/primitives';
@@ -202,8 +202,6 @@ function Body() {
   };
 
   const shown = onlyCheck ? rows.filter(needsCheck) : rows;
-  const dragRef = useRef<HTMLLabelElement>(null);
-  const [drag, setDrag] = useState(false);
 
   /* ---------------- saved ---------------- */
   if (saved) {
@@ -247,10 +245,9 @@ function Body() {
 
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader eyebrow="Collect" title="Student" emphasis="rating" description="Photograph or scan a batch’s paper forms. Each is read, you check it, and the batch average is saved to the database." />
+      <PageHeader eyebrow="Collect" title="Student" emphasis="rating" description="Enter a batch’s paper forms by hand — one card per student. The batch average is worked out and saved to the database." />
 
       {lookupError && <Banner tone="bad">Could not load the branch and batch lists: {lookupError}</Banner>}
-      {lookups && !lookups.ocrConfigured && <Banner tone="warn">Reading forms is not switched on yet. Add <code className="font-mono text-[12.5px]">GEMINI_API_KEY</code> to the <code className="font-mono text-[12.5px]">.env</code> file and restart the server. You can still enter forms by hand below.</Banner>}
       {needKey && (
         <Banner tone="warn">
           <span className="flex flex-wrap items-center gap-2">
@@ -271,7 +268,7 @@ function Body() {
       )}
 
       {/* 1 ── batch details */}
-      <Step n={1} title="Which batch are these forms for?" hint="Pick this once for the whole pile. The header on each form is read and checked against your choice.">
+      <Step n={1} title="Which batch are these ratings for?" hint="Pick this once for the whole batch.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Field label="Programme">
             <select
@@ -332,48 +329,11 @@ function Body() {
         </div>
       </Step>
 
-      {/* 2 ── upload */}
-      <Step n={2} title="Add the forms" hint="Photos (JPG, PNG, WebP) or PDFs — one or many at a time. A PDF with many pages is fine.">
-        <label
-          ref={dragRef}
-          onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
-          className={cn('flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors', drag ? 'border-primary bg-accent' : 'border-border hover:bg-accent/40')}
-        >
-          <UploadCloud className="size-7 text-muted-foreground" />
-          <span className="text-[15px] font-medium">Drop photos or PDFs here, or click to choose</span>
-          <span className="text-[12.5px] text-muted-foreground">Good light, the whole form in frame, held flat. Nothing leaves your control: you check every form before it is saved.</span>
-          <input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ''; }} />
-        </label>
-
-        {jobs.length > 0 && (
-          <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
-            {jobs.map((j) => (
-              <li key={j.id} className="flex items-center gap-2.5 rounded-lg border border-border/70 px-3 py-2 text-[13px]">
-                <FileText className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{j.name}</span>
-                {j.status === 'reading' && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Reading" />}
-                {j.status === 'queued' && <span className="text-muted-foreground">waiting</span>}
-                {j.status === 'done' && !j.error && <span className="flex items-center gap-1 text-good"><Check className="size-4" />{plural(j.forms, 'form')}</span>}
-                {j.status === 'done' && j.error && <span className="text-critical" title={j.error}>no form found</span>}
-                {j.status === 'error' && (
-                  <span className="flex items-center gap-2 text-critical">
-                    <span className="max-w-56 truncate" title={j.error}>{j.error}</span>
-                    <button type="button" onClick={() => retry(j)} className="inline-flex items-center gap-1 text-foreground underline" aria-label={`Retry ${j.name}`}><RotateCcw className="size-3.5" />retry</button>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Step>
-
-      {/* 3 ── review */}
+      {/* 2 ── enter the forms */}
       <Step
-        n={3}
-        title="Check what was read"
-        hint="Each card is one student. Tap a number to correct a tick. Anything the reader was unsure about is marked."
+        n={2}
+        title="Enter the forms"
+        hint="Each card is one student. Tap a number for each question, and add their feedback if they wrote any."
         right={
           <div className="flex flex-wrap items-center gap-2">
             {toCheck > 0 && (
@@ -400,8 +360,8 @@ function Body() {
             <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">Reading your forms…</p>
           ) : (
             <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
-              <p className="text-sm font-semibold">Forms you add will appear here</p>
-              <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Upload photos above, or fill the forms in by hand: type how many students there are and that many blank forms appear.</p>
+              <p className="text-sm font-semibold">No forms yet</p>
+              <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">Type how many students there are and that many blank forms appear — fill in each student’s ticks.</p>
               <div className="mt-4 flex justify-center">
                 <ManualAdd onAdd={addByHand} />
               </div>
@@ -438,7 +398,7 @@ function Body() {
       </Step>
 
       {/* 4 ── result */}
-      <Step n={4} title="The batch average" hint="Every criterion is averaged across all the forms, then the five are averaged into the Average Rating.">
+      <Step n={3} title="The batch average" hint="Every criterion is averaged across all the forms, then the five are averaged into the Average Rating.">
         {usable.length === 0 ? (
           <p className="text-sm text-muted-foreground">{rows.length > 0 ? 'Every form is still empty — fill in at least one to see the average.' : 'Nothing to average yet.'}</p>
         ) : (

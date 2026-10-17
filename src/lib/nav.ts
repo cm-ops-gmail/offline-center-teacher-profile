@@ -1,5 +1,4 @@
-import { Building2, ClipboardCheck, Presentation, GraduationCap, LayoutDashboard, Scale, ScanLine, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
-import { PROGRAMS } from '@/features/ratings/programs';
+import { Building2, ClipboardCheck, Presentation, LayoutDashboard, Scale, ScanLine, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -23,10 +22,6 @@ export const NAV: NavGroup[] = [
       { label: 'Compare teachers', href: '/compare', icon: Scale },
       { label: 'Branches', href: '/branches', icon: Building2 },
     ],
-  },
-  {
-    category: 'Programmes',
-    items: PROGRAMS.map((p) => ({ label: p.label, href: `/programs/${p.id}`, icon: GraduationCap, dot: p.color })),
   },
   {
     category: 'Collect',
