@@ -30,7 +30,7 @@ export const NAV: NavGroup[] = [
   },
   {
     category: 'Collect',
-    items: [{ label: 'Upload forms', href: '/collect', icon: ScanLine },
+    items: [{ label: 'Student rating', href: '/collect', icon: ScanLine },
       { label: 'OpEx rating', href: '/opex', icon: ClipboardCheck },
       { label: 'Programme team rating', href: '/programme-team', icon: Presentation },
     ],

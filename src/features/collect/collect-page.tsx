@@ -247,7 +247,7 @@ function Body() {
 
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader eyebrow="Collect" title="Upload" emphasis="forms" description="Photograph or scan a batch’s paper forms. Each is read, you check it, and the batch average is saved to the database." />
+      <PageHeader eyebrow="Collect" title="Student" emphasis="rating" description="Photograph or scan a batch’s paper forms. Each is read, you check it, and the batch average is saved to the database." />
 
       {lookupError && <Banner tone="bad">Could not load the branch and batch lists: {lookupError}</Banner>}
       {lookups && !lookups.ocrConfigured && <Banner tone="warn">Reading forms is not switched on yet. Add <code className="font-mono text-[12.5px]">GEMINI_API_KEY</code> to the <code className="font-mono text-[12.5px]">.env</code> file and restart the server. You can still enter forms by hand below.</Banner>}

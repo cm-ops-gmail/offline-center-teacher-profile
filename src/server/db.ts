@@ -354,7 +354,7 @@ export async function getRatings(force = false): Promise<RatingsPayload> {
   return inflight;
 }
 
-/* ---------- dropdown lists for the "Upload forms" screen ---------- */
+/* ---------- dropdown lists for the Student rating entry screen ---------- */
 export interface Lookups {
   branches: string[];
   batches: string[];

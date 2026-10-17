@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ScanLine } from 'lucide-react';
 import { NAV, type NavItem } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
@@ -38,8 +37,7 @@ function Item({ item, active }: { item: NavItem; active: boolean }) {
  */
 export function Sidebar({ embedded, open, onClose }: { embedded: boolean; open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const collect = NAV.flatMap((g) => g.items).find((i) => i.href === '/collect');
-  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((i) => i.href !== '/collect') })).filter((g) => g.items.length > 0);
+  const groups = NAV;
   const top = embedded ? 'top-12' : 'top-14';
 
   return (
@@ -53,18 +51,6 @@ export function Sidebar({ embedded, open, onClose }: { embedded: boolean; open: 
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {collect && (
-          <div className="border-b border-sidebar-border p-3">
-            <Link
-              href={collect.href}
-              aria-current={isActive(pathname, collect.href) ? 'page' : undefined}
-              className={cn('flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]', isActive(pathname, collect.href) && 'ring-2 ring-ring ring-offset-2 ring-offset-sidebar')}
-            >
-              <ScanLine size={16} /> Upload forms
-            </Link>
-          </div>
-        )}
-
         <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto p-3" aria-label="Main">
           {groups.map((group) => (
             <div key={group.category} className="space-y-1">

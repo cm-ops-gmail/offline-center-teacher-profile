@@ -31,7 +31,7 @@ Credentials are only ever read on the server (`src/server/db.ts`); the browser t
 | `/compare` (also on the overview) | **Teacher Comparison**: pick two teachers (searchable dropdowns) and see Average Rating, First/Last, improvement, programmes, branches, batches, best/worst batch, per-programme ratings and every criterion side by side. The stronger cell in each row is shaded. The pair is kept in the URL (`?a=&b=`). |
 | `/teachers`, `/teachers/[id]` | Teacher list with Average Rating; a profile opens straight into the sheet-style data per programme |
 | `/branches` | Average Rating by branch, and a branch × programme grid |
-| `/collect` | **Upload forms** — photograph the paper forms, OCR reads them, you check, and the averages are saved to the database (see below) |
+| `/collect` | **Student rating** (under Collect) — photograph the paper forms, OCR reads them, you check, and the averages are saved to the database (see below) |
 | `/data-health` | What was read, what was tidied, what to fix in the data |
 
 Filters live in the URL (`?program=&branch=&level=&teacher=&batch=&criterion=&class=`); **Teacher**, **Batch** and **Criterion** are searchable dropdowns. The **Criterion** filter looks at every number through one criterion (e.g. “Communication Skills”); each option shows which programmes ask it (SEJ’s criteria differ from IELTS / EF / After SSC), and programmes that don’t ask it drop out, so any view can be shared as a link.
@@ -52,7 +52,7 @@ Dark mode and HQ-embedded mode (`?source=hq`) are kept. Each programme keeps its
 - Data is cached server-side for 1 minute (and cleared after every save); the **Refresh** button bypasses the cache.
 - **Login:** every page and API route needs a sign-in (`src/proxy.ts`). The credentials are hard-coded in `src/lib/auth.ts` (username `admin`, password `654321`); change them there. The session is a signed cookie valid for 7 days, signed with `AUTH_SECRET` if set, otherwise `GOOGLE_PRIVATE_KEY`.
 
-## Upload forms (OCR) — `/collect`
+## Student rating entry (OCR) — `/collect`
 
 Turns a batch's paper forms into the master rating row, replacing the manual copy-and-average step.
 
