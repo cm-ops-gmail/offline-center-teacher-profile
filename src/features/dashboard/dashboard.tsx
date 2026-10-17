@@ -146,7 +146,7 @@ function Averages({ batches, lockedProgram, onPick }: { batches: BatchRecord[]; 
   const branchRows = useMemo(() => toRows(byBranch(batches)), [batches]);
   const teacherRows = useMemo(() => toRows(byTeacher(batches)), [batches]);
   const levelRows = useMemo(() => toRows(groupBy(batches.filter((b) => b.level), (b) => b.level!)), [batches]);
-  const { filters: current } = useRatingsData();
+  const { filters: current, opexView, programmeView } = useRatingsData();
   const criterion = current.criterion;
 
 
@@ -184,7 +184,7 @@ function Averages({ batches, lockedProgram, onPick }: { batches: BatchRecord[]; 
         </p>
       )}
 
-      <TeacherComparison batches={batches} criterion={criterion} />
+      <TeacherComparison batches={batches} criterion={criterion} opex={opexView({ program: lockedProgram, teacher: 'all' })} programme={programmeView({ program: lockedProgram, teacher: 'all' })} />
     </>
   );
 }

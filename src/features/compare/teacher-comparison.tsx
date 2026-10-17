@@ -6,13 +6,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@tenminuteschool/design
 import { SearchSelect } from '@/components/ui/search-select';
 import { Monogram } from '@/components/ui/primitives';
 import { batchRating } from '@/features/ratings/analytics';
-import { columnsFor } from '@/features/ratings/criteria';
 import { PROGRAMS, PROGRAM_BY_ID } from '@/features/ratings/programs';
-import type { BatchRecord, ProgramId } from '@/features/ratings/types';
+import type { BatchRecord, OpexRating, ProgramId } from '@/features/ratings/types';
 import { Formula, Note, Title } from '@/features/dashboard/kpi-info';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { columnRating, teacherStats, type TeacherStats } from './stats';
+import { teacherStats, type TeacherStats } from './stats';
 
 /** The two picked teachers live in the URL (?a=&b=) so a comparison can be shared as a link. */
 function usePair() {
@@ -72,21 +71,41 @@ const countBy = (bs: BatchRecord[], key: (b: BatchRecord) => string): [string, n
 };
 
 /** The worked formula for an average of batch ratings: "sum ÷ n = result". */
-function AverageInfo({ title, intro, values, note }: { title: string; intro: ReactNode; values: number[]; note?: ReactNode }) {
+function AverageInfo({ title, intro, values, note, unit = ['batch', 'batches'] }: { title: string; intro: ReactNode; values: number[]; note?: ReactNode; unit?: [string, string] }) {
   const total = sum(values);
   return (
     <div>
       <Title>{title}</Title>
       <p className="text-[13px] leading-snug">{intro}</p>
       <Formula>
-        {total.toFixed(2)} ÷ {values.length} {values.length === 1 ? 'batch' : 'batches'} = {values.length ? fmt(total / values.length) : '—'}
+        {total.toFixed(2)} ÷ {values.length} {values.length === 1 ? unit[0] : unit[1]} = {values.length ? fmt(total / values.length) : '—'}
       </Formula>
       {note && <Note>{note}</Note>}
     </div>
   );
 }
 
-const OVERVIEW = (criterion: string): Row[] => {
+/** A row for another team's average (OpEx / Programme team): their ratings of this teacher, added up and divided by how many there are. */
+const teamRow = (key: string, label: string, who: string, unit: [string, string], rows: OpexRating[]): Row => ({
+  key, icon: Star, label, better: 'higher',
+  cell: (_s, bs) => {
+    const mine = rows.filter((r) => r.teacherId === bs[0]?.teacherId);
+    const values = mine.map((r) => r.avg);
+    const avg = values.length ? sum(values) / values.length : null;
+    return {
+      text: avg === null ? '—' : (
+        <span>
+          <strong className="tabular-nums">{fmt(avg)}</strong>
+          <span className="ml-1.5 text-xs text-muted-foreground">{plural(values.length, unit[0], unit[1])}</span>
+        </span>
+      ),
+      value: avg,
+      info: avg === null ? undefined : <AverageInfo title={label} intro={<>Every rating the {who} gave this teacher (within the date range and branch filters), added up and divided by how many there are.</>} values={values} unit={unit} />,
+    };
+  },
+});
+
+const OVERVIEW = (criterion: string, opex: OpexRating[], programme: OpexRating[]): Row[] => {
   const forCrit = criterion !== 'all' ? ` for “${criterion}”` : '';
   return [
     {
@@ -149,6 +168,8 @@ const OVERVIEW = (criterion: string): Row[] => {
         info: <AverageInfo title="Average Rating" intro={<>Each batch’s rating{forCrit} is the average of its First and Last Rating. All of them are added up and divided by the number of batches.</>} values={ratingsOf(bs)} />,
       }),
     },
+    teamRow('opex', 'Avg OpEx rating', 'OpEx team', ['rating', 'ratings'], opex),
+    teamRow('programme', 'Avg Programme team rating', 'Programme team', ['observation', 'observations'], programme),
     {
       key: 'first', icon: Star, label: 'Avg First Rating', better: 'higher',
       cell: (s, bs) => ({
@@ -285,8 +306,8 @@ function Head({ id, batches }: { id: string; batches: BatchRecord[] }) {
   );
 }
 
-/** Two teachers side by side: rating, programmes, batches and every criterion. Each value explains itself in a popover. */
-export function TeacherComparison({ batches, criterion = 'all' }: { batches: BatchRecord[]; criterion?: string }) {
+/** Two teachers side by side: student, OpEx and Programme team ratings, programmes and batches. Each value explains itself in a popover. */
+export function TeacherComparison({ batches, criterion = 'all', opex = [], programme = [] }: { batches: BatchRecord[]; criterion?: string; opex?: OpexRating[]; programme?: OpexRating[] }) {
   const { a, b, set } = usePair();
 
   const teachers = useMemo(() => {
@@ -304,7 +325,7 @@ export function TeacherComparison({ batches, criterion = 'all' }: { batches: Bat
 
   const programIds = PROGRAMS.map((p) => p.id).filter((id) => statsA?.byProgram[id] || statsB?.byProgram[id]);
   const chosen = statsA || statsB;
-  const rows = useMemo(() => OVERVIEW(criterion), [criterion]);
+  const rows = useMemo(() => OVERVIEW(criterion, opex, programme), [criterion, opex, programme]);
   const subtitle = `Select two teachers to compare their ratings side by side.${criterion !== 'all' ? ` Showing “${criterion}” only.` : ''}`;
 
   return (
@@ -385,44 +406,11 @@ export function TeacherComparison({ batches, criterion = 'all' }: { batches: Bat
                 );
               })}
 
-              {programIds.map((id) => (
-                <CriteriaRows key={id} id={id} criterion={criterion} a={statsA} b={statsB} bsA={bsA} bsB={bsB} whoA={whoA} whoB={whoB} />
-              ))}
             </tbody>
           </table>
         </div>
       )}
       {chosen && <p className="mt-3 text-xs text-muted-foreground">The stronger score in each row is shaded green. Tap the small “i” beside a value to see how it was worked out. Every number follows the filters above.</p>}
     </section>
-  );
-}
-
-function CriteriaRows({ id, criterion, a, b, bsA, bsB, whoA, whoB }: { id: ProgramId; criterion: string; a: TeacherStats | null; b: TeacherStats | null; bsA: BatchRecord[]; bsB: BatchRecord[]; whoA: string; whoB: string }) {
-  const cols = columnsFor(id, criterion);
-  return (
-    <>
-      <Section color={PROGRAM_BY_ID[id].color}>{PROGRAM_BY_ID[id].label} · scores by criterion</Section>
-      {cols.map((name, i) => {
-        const cell = (s: TeacherStats | null, bs: BatchRecord[]): Cell | null => {
-          const scores = s?.byCriterion[id];
-          if (!scores) return null;
-          const v = scores[i] ?? null;
-          const per = bs.filter((x) => x.program === id).map((x) => columnRating(x, i)).filter((r): r is number => r !== null);
-          return {
-            text: fmt(v),
-            value: v,
-            info: <AverageInfo title={`${PROGRAM_BY_ID[id].short} · ${name}`} intro={<>For each batch, the average of its First and Last score on “{name}”; those are added up and divided by the number of batches.</>} values={per} />,
-          };
-        };
-        return (
-          <tr key={name} className="border-b border-border/60 last:border-0">
-            <td className="px-3 py-3 font-medium">
-              <span className="pl-6.5">{name}</span>
-            </td>
-            <Cells a={cell(a, bsA)} b={cell(b, bsB)} better="higher" label={`${name} (${PROGRAM_BY_ID[id].short})`} whoA={whoA} whoB={whoB} />
-          </tr>
-        );
-      })}
-    </>
   );
 }

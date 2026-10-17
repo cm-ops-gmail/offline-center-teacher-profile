@@ -10,14 +10,14 @@ export function ComparePage() {
 }
 
 function Body() {
-  const { filtered, filters } = useRatingsData();
+  const { filtered, filters, opexView, programmeView } = useRatingsData();
   // Teacher and Batch filters are ignored here: this screen picks its own two teachers.
   const batches = filtered({ skip: ['teacher', 'batch'] });
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader eyebrow="Insights" title="Compare teachers" description="Pick two teachers and see their ratings, programmes, batches and every criterion side by side. The filters narrow both teachers the same way." />
+      <PageHeader eyebrow="Insights" title="Compare teachers" description="Pick two teachers and see their Student, OpEx and Programme team ratings, programmes and batches side by side. The filters narrow both teachers the same way." />
       <DashboardFilters hide={['teacher', 'batch']} />
-      <TeacherComparison batches={batches} criterion={filters.criterion} />
+      <TeacherComparison batches={batches} criterion={filters.criterion} opex={opexView({ teacher: 'all' })} programme={programmeView({ teacher: 'all' })} />
     </div>
   );
 }
