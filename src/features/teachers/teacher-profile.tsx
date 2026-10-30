@@ -15,6 +15,7 @@ import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS, PROGRAM_BY_ID } from '@/features/ratings/programs';
 import type { Teacher } from '@/features/ratings/types';
 import { ManageProfile } from '@/features/teachers/manage-profile';
+import { TeacherClasses } from '@/features/teachers/teacher-classes';
 import { plural } from '@/lib/format';
 
 export function TeacherProfile({ id }: { id: string }) {
@@ -54,12 +55,9 @@ function Body({ id, teacher }: { id: string; teacher: Teacher }) {
   const branches = [...new Set(all.map((b) => b.branch))];
   const remarks = view.filter((b) => b.remarks.length > 0);
   const round = filters.cls === 'first' ? 'First Rating' : 'Last Rating';
-  const contact = [
-    profile?.email,
-    profile?.phone,
-    profile?.yearsOfExperience != null && `${profile.yearsOfExperience} yr${profile.yearsOfExperience === 1 ? '' : 's'} of experience`,
-    profile?.address,
-  ].filter(Boolean) as string[];
+  // Classes: a batch is "upcoming" until its Last Rating is in, "past" afterwards.
+  const upcoming = all.filter((b) => b.last == null);
+  const past = all.filter((b) => b.last != null);
 
   return (
     <div className="flex flex-col gap-7">
@@ -76,7 +74,6 @@ function Body({ id, teacher }: { id: string; teacher: Teacher }) {
               {name}
               {profile && <Pill tone={profile.status === 'active' ? 'good' : 'warn'}>{profile.status === 'active' ? 'Active' : 'Inactive'}</Pill>}
             </h1>
-            {profile?.designation && <p className="mt-1 text-sm text-foreground/80">{profile.designation}</p>}
             <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-muted-foreground">
               {programs.map((p) => (
                 <ProgramChip key={p.id} id={p.id} />
@@ -84,16 +81,21 @@ function Body({ id, teacher }: { id: string; teacher: Teacher }) {
               <span>·</span>
               <span>{branches.join(', ')}</span>
             </p>
-            {contact.length > 0 && <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{contact.join(' · ')}</p>}
           </div>
         </div>
         <ManageProfile teacher={teacher} />
       </header>
 
+      <ProfileDetails teacher={teacher} />
+
       <RatingSummary teacher={id} interactive />
       <DashboardFilters lockedTeacher={id} />
 
       <RatingTabs
+        upcoming={<TeacherClasses kind="upcoming" batches={all} />}
+        past={<TeacherClasses kind="past" batches={all} />}
+        upcomingCount={upcoming.length}
+        pastCount={past.length}
         studentCount={view.length}
         opexCount={opex.length}
         programmeCount={programme.length}
@@ -127,5 +129,35 @@ function Body({ id, teacher }: { id: string; teacher: Teacher }) {
         programme={<OpexPanel team="programme" rows={programme} by="entries" />}
       />
     </div>
+  );
+}
+
+/** The teacher's saved details, shown first on their page — before the rating cards. */
+function ProfileDetails({ teacher }: { teacher: Teacher }) {
+  const p = teacher.profile;
+  const years = p?.yearsOfExperience;
+  const fields: [string, string][] = [
+    ['Designation', p?.designation ?? ''],
+    ['Email', p?.email ?? ''],
+    ['Phone', p?.phone ?? ''],
+    ['Years of experience', years != null ? String(years) : ''],
+    ['Address', p?.address ?? ''],
+  ];
+  return (
+    <section className="rise card p-5 sm:p-6">
+      <SectionTitle title="Profile" hint="Details kept by the program manager." />
+      {p ? (
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          {fields.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+              <dd className="mt-1 break-words text-sm text-foreground">{value || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-sm text-muted-foreground">No details yet — add a designation, contact info, status and photo with <span className="font-medium text-foreground">Manage profile</span> (top right).</p>
+      )}
+    </section>
   );
 }
