@@ -21,14 +21,18 @@ export function Header({
   onMenu,
   sidebarCollapsed = false,
   onToggleSidebar,
+  user,
 }: {
   embedded: boolean;
   onMenu: () => void;
   /** Whether the sidebar is hidden (the menu was collapsed by the program manager). */
   sidebarCollapsed?: boolean;
   onToggleSidebar: () => void;
+  /** Who is signed in; teachers get a menu-free header showing their own name. */
+  user?: { kind: 'admin' | 'teacher'; name: string } | null;
 }) {
   const pathname = usePathname();
+  const teacher = user?.kind === 'teacher';
 
   if (embedded) {
     return (
@@ -36,37 +40,41 @@ export function Header({
         <button type="button" onClick={onMenu} aria-label="Open menu" className="-ml-1 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Menu size={20} />
         </button>
-        <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+        <span className="text-sm font-semibold tracking-tight">{teacher ? user?.name : APP_NAME}</span>
       </header>
     );
   }
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-8">
-      <button type="button" onClick={onMenu} aria-label="Open menu" className="-ml-1 shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden">
-        <Menu size={20} />
-      </button>
+      {!teacher && (
+        <button type="button" onClick={onMenu} aria-label="Open menu" className="-ml-1 shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden">
+          <Menu size={20} />
+        </button>
+      )}
 
-      <Link href="/" className="flex shrink-0 items-center gap-2.5">
+      <Link href={teacher ? '/me' : '/'} className="flex shrink-0 items-center gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="10 Minute School" width={32} height={32} className="size-8 shrink-0 rounded-lg object-contain" />
         <span className="hidden text-sm font-semibold tracking-tight sm:inline">{APP_NAME}</span>
       </Link>
 
-      <button
-        type="button"
-        onClick={onToggleSidebar}
-        aria-label={sidebarCollapsed ? 'Show menu' : 'Hide menu'}
-        title={sidebarCollapsed ? 'Show menu' : 'Hide menu'}
-        className="hidden shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:block"
-      >
-        {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
-      </button>
+      {!teacher && (
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarCollapsed ? 'Show menu' : 'Hide menu'}
+          title={sidebarCollapsed ? 'Show menu' : 'Hide menu'}
+          className="hidden shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:block"
+        >
+          {sidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+        </button>
+      )}
 
       <div aria-hidden className="hidden h-5 w-px shrink-0 bg-border sm:block" />
 
       <div className="min-w-0 flex-1">
-        <span className="hidden truncate text-sm font-semibold tracking-tight text-muted-foreground sm:inline">{currentLabel(pathname)}</span>
+        <span className="hidden truncate text-sm font-semibold tracking-tight text-muted-foreground sm:inline">{teacher ? user?.name : currentLabel(pathname)}</span>
       </div>
 
       <SyncStatus />

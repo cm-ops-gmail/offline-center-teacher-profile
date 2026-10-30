@@ -12,11 +12,11 @@ import { ManageOnlineProfile } from './manage-online-profile';
 import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId, type OnlineTeacher, inDateRange } from './data';
 import { cn } from '@/lib/utils';
 
-export function OnlineTeacherProfile({ id }: { id: string }) {
+export function OnlineTeacherProfile({ id, home = false }: { id: string; home?: boolean }) {
   const teachers = useOnlineTeachers();
   const teacher = teachers.find((t) => t.id === id);
   if (!teacher) return <NotFound />;
-  return <Body teacher={teacher} />;
+  return <Body teacher={teacher} home={home} />;
 }
 
 function NotFound() {
@@ -72,7 +72,7 @@ function ClassTabs({ upcoming, past }: { upcoming: OnlineClass[]; past: OnlineCl
   );
 }
 
-function Body({ teacher }: { teacher: OnlineTeacher }) {
+function Body({ teacher, home = false }: { teacher: OnlineTeacher; home?: boolean }) {
   // The programme, subject and date filters reshape the cards and both class lists.
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
   const [subject, setSubject] = useState<string | 'all'>('all');
@@ -97,9 +97,11 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
 
   return (
     <div className="flex flex-col gap-7">
-      <Link href="/online/teachers" className="rise -mb-3 inline-flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> All online teachers
-      </Link>
+      {!home && (
+        <Link href="/online/teachers" className="rise -mb-3 inline-flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="size-3.5" /> All online teachers
+        </Link>
+      )}
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

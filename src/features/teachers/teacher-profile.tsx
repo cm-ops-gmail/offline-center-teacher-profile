@@ -18,13 +18,13 @@ import { ManageProfile } from '@/features/teachers/manage-profile';
 import { TeacherClasses } from '@/features/teachers/teacher-classes';
 import { plural } from '@/lib/format';
 
-export function TeacherProfile({ id }: { id: string }) {
+export function TeacherProfile({ id, home = false }: { id: string; home?: boolean }) {
   return (
     <DataGate>
       {(data) => {
         const teacher = data.teachers.find((t) => t.id === id);
         if (!teacher || !data.batches.some((b) => b.teacherId === id)) return <NotFound />;
-        return <Body id={id} teacher={teacher} />;
+        return <Body id={id} teacher={teacher} home={home} />;
       }}
     </DataGate>
   );
@@ -42,7 +42,7 @@ function NotFound() {
   );
 }
 
-function Body({ id, teacher }: { id: string; teacher: Teacher }) {
+function Body({ id, teacher, home = false }: { id: string; teacher: Teacher; home?: boolean }) {
   const { data, filtered, filters, opexView, programmeView } = useRatingsData();
   const name = teacher.name;
   const profile = teacher.profile;
@@ -61,9 +61,11 @@ function Body({ id, teacher }: { id: string; teacher: Teacher }) {
 
   return (
     <div className="flex flex-col gap-7">
-      <Link href="/teachers" className="rise -mb-3 inline-flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="size-3.5" /> All teachers
-      </Link>
+      {!home && (
+        <Link href="/teachers" className="rise -mb-3 inline-flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="size-3.5" /> All teachers
+        </Link>
+      )}
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

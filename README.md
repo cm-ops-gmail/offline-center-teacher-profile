@@ -20,6 +20,17 @@ Optional add-ons, run in the SQL editor the same way: `supabase/add-opex.sql` (O
 All data lives in three Supabase tables — `master_ratings` (one row per teacher × branch × batch × round, what the dashboard reads), `student_responses` (one row per student form) and `lookups` (branch / batch dropdown lists). Nothing reads or writes Google Sheets any more; the `GOOGLE_*` variables are only used by `npm run db:seed` (add `-- --force` to wipe and re-import).
 Credentials are only ever read on the server (`src/server/db.ts`); the browser talks to `/api/ratings`.
 
+## Logins (hard-coded until the mail-auth role SDK is integrated)
+
+| Username | Password | Who / what they see |
+|---|---|---|
+| `admin` | `654321` | The program manager — everything |
+| `nusrat` | `1234` | Nusrat Jahan — **online only**: her online profile and upcoming classes |
+| `sirazum` | `1234` | Sirazum Munira — **offline only**: her offline profile |
+| `adiba` | `1234` | Adiba Nawrin — **both**: can switch between her online and offline profiles |
+
+Teacher accounts land on `/me`, see no menus, and every other page redirects them back (see `src/proxy.ts` — only `/me`, the ratings read and saving their own offline profile are allowed).
+
 ## How the main number works
 
 - A **batch's rating** = the average of its First Rating and Last Rating (just the one, if only one exists yet).

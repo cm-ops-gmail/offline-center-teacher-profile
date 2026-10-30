@@ -214,6 +214,8 @@ export const DEMO_TEACHERS: OnlineTeacher[] = [
   teacher('arif-chowdhury', 'Arif Chowdhury', 'Online Instructor', ['hsc-26'], ['Mathematics'], 3.9, 2, 'inactive', 'Rajshahi'),
   teacher('tasnim-rahman', 'Tasnim Rahman', 'Online Instructor', ['class-7', 'class-6'], ['English', 'ICT'], 4.4, 4, 'active', 'Mohammadpur, Dhaka'),
   teacher('imran-hossain', 'Imran Hossain', 'Online Instructor', ['hsc-27', 'class-7'], ['Physics', 'Chemistry'], 4.5, 6, 'active', 'Narayanganj'),
+  // Also an offline teacher (LCI003) — the demo login "adiba" shows both profiles.
+  teacher('adiba-nawrin', 'Adiba Nawrin', 'Senior Online Instructor', ['hsc-27', 'class-9'], ['English', 'Mathematics'], 4.6, 8, 'active', 'Mymensingh'),
 ];
 
 /* ---------- Manage profile saves (demo) live in localStorage ---------- */

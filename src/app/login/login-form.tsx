@@ -15,12 +15,11 @@ export function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, next: new URLSearchParams(window.location.search).get('next') }) });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? 'Could not sign in. Try again.');
-      // Only ever go back to a page inside this app.
-      const next = new URLSearchParams(window.location.search).get('next');
-      window.location.assign(next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login') ? next : '/');
+      // The server says where this account belongs: teachers land on their own profile.
+      window.location.assign(typeof json.redirect === 'string' && json.redirect.startsWith('/') ? json.redirect : '/');
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
