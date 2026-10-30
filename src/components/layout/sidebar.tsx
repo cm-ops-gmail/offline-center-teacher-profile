@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { APP_NAME, NAV, type NavItem } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
@@ -58,7 +58,8 @@ function CollapsibleItem({ item, pathname }: { item: NavItem; pathname: string }
 /**
  * Always-on from lg up, a sliding drawer on phones — as in the TA & Per-Diem system.
  * Inside HQ it is the flat secondary nav, pinned open. The program manager can hide
- * the whole menu with the collapse button (and bring it back with the floating one).
+ * the whole menu with the collapse button (and bring it back with the floating one),
+ * and fold/unfold everything under the Offline Teacher heading by clicking it.
  */
 export function Sidebar({
   embedded,
@@ -77,6 +78,8 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const top = embedded ? 'top-12' : 'top-14';
+  // Clicking "Offline Teacher" unfolds the menu under it; clicking again hides it.
+  const [menuOpen, setMenuOpen] = useState(true);
 
   return (
     <>
@@ -90,12 +93,19 @@ export function Sidebar({
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-3.5">
-          <Link href="/" className="flex min-w-0 items-center gap-2.5">
+        <div className="flex items-center justify-between gap-1 border-b border-sidebar-border px-3 py-2.5">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Hide the Offline Teacher menu' : 'Show the Offline Teacher menu'}
+            className={cn('flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-muted', menuOpen ? 'text-foreground' : 'text-muted-foreground')}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="" width={24} height={24} className="size-6 shrink-0 rounded-md object-contain" />
-            <span className="truncate text-sm font-bold tracking-tight text-foreground">{APP_NAME}</span>
-          </Link>
+            <span className="truncate text-sm font-bold tracking-tight">{APP_NAME}</span>
+            {menuOpen ? <ChevronDown size={16} className="ml-auto shrink-0" aria-hidden /> : <ChevronRight size={16} className="ml-auto shrink-0" aria-hidden />}
+          </button>
           <button
             type="button"
             onClick={onCollapse}
@@ -107,16 +117,18 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto p-3" aria-label="Main">
-          {NAV.map((group) => (
-            <div key={group.category} className="space-y-1">
-              <p className="px-1 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">{group.category}</p>
-              {group.items.map((item) =>
-                item.children ? <CollapsibleItem key={item.label} item={item} pathname={pathname} /> : <Item key={item.href} item={item} active={isActive(pathname, item.href)} />,
-              )}
-            </div>
-          ))}
-        </nav>
+        {menuOpen && (
+          <nav className="min-h-0 flex-1 space-y-5 overflow-y-auto p-3" aria-label="Main">
+            {NAV.map((group) => (
+              <div key={group.category} className="space-y-1">
+                <p className="px-1 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">{group.category}</p>
+                {group.items.map((item) =>
+                  item.children ? <CollapsibleItem key={item.label} item={item} pathname={pathname} /> : <Item key={item.href} item={item} active={isActive(pathname, item.href)} />,
+                )}
+              </div>
+            ))}
+          </nav>
+        )}
 
         {embedded && (
           <div className="flex items-center justify-between border-t border-sidebar-border p-3">
