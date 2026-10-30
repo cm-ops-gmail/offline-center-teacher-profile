@@ -24,10 +24,11 @@ export function OnlineClasses({ kind, classes }: { kind: 'upcoming' | 'past'; cl
 
   return (
     <div className="card-hover overflow-x-auto">
-      <table className="w-full min-w-[560px] text-[13.5px]">
+      <table className="w-full min-w-[640px] text-[13.5px]">
         <thead className="bg-muted/60 text-left text-[12px] text-muted-foreground">
           <tr>
             <th className="px-3 py-2.5 font-medium">Programme</th>
+            <th className="px-3 py-2.5 font-medium">Subject</th>
             <th className="px-3 py-2.5 font-medium">Batch</th>
             <th className="px-3 py-2.5 font-medium">Date</th>
             <th className="px-3 py-2.5 font-medium">Time</th>
@@ -37,8 +38,8 @@ export function OnlineClasses({ kind, classes }: { kind: 'upcoming' | 'past'; cl
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-3 py-10 text-center text-muted-foreground">
-                {upcoming ? 'No classes scheduled right now.' : 'No classes taken yet.'}
+              <td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">
+                {upcoming ? 'No upcoming classes match these filters.' : 'No past classes match these filters.'}
               </td>
             </tr>
           )}
@@ -47,7 +48,8 @@ export function OnlineClasses({ kind, classes }: { kind: 'upcoming' | 'past'; cl
               <td className="px-3 py-2.5">
                 <OnlineChip id={c.programme} />
               </td>
-              <td className="px-3 py-2.5 font-medium">{c.batch}</td>
+              <td className="px-3 py-2.5 font-medium">{c.subject}</td>
+              <td className="px-3 py-2.5 text-muted-foreground">{c.batch}</td>
               <td className="tabular px-3 py-2.5">{day(c.date)}</td>
               <td className="tabular px-3 py-2.5 text-muted-foreground">{c.time}</td>
               <td className="px-3 py-2.5 text-right">

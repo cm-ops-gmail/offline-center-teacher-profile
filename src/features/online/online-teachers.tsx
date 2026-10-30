@@ -6,7 +6,7 @@ import { Input } from '@tenminuteschool/design-system';
 import { Monogram, PageHeader, Pill } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
 import { OnlineChip } from './online-classes';
-import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineProgramId, type OnlineTeacher } from './data';
+import { metricsOf, ONLINE_PROGRAMS, useOnlineTeachers, type OnlineProgramId, type OnlineTeacher } from './data';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -18,18 +18,24 @@ export function OnlineTeachersPage() {
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'style', dir: -1 });
 
+  // Every number comes from the teacher's past classes, narrowed by the programme filter.
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const list = teachers.filter(
-      (t) => (programme === 'all' || t.programmes.includes(programme)) && (!needle || `${t.name} ${t.designation}`.toLowerCase().includes(needle)),
-    );
-    const val = (t: OnlineTeacher) => (sort.key === 'name' ? t.name : sort.key === 'classes' ? t.totalClasses : sort.key === 'style' ? t.teachingStyle : sort.key === 'duration' ? t.avgDuration : sort.key === 'attendance' ? t.avgAttendance : t.avgWatchTime);
+    const list = teachers
+      .filter((t) => programme === 'all' || t.programmes.includes(programme))
+      .filter((t) => !needle || `${t.name} ${t.designation} ${t.subjects.join(' ')}`.toLowerCase().includes(needle))
+      .map((t) => ({ t, m: metricsOf(programme === 'all' ? t.past : t.past.filter((c) => c.programme === programme)) }));
+    const val = (r: (typeof list)[number]) => (sort.key === 'name' ? r.t.name : sort.key === 'classes' ? r.m.classes : sort.key === 'style' ? r.m.style : sort.key === 'duration' ? r.m.duration : sort.key === 'attendance' ? r.m.attendance : r.m.watch);
     return [...list].sort((a, b) => {
       const av = val(a);
       const bv = val(b);
+      if (av == null) return 1;
+      if (bv == null) return -1;
       return (typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv))) * sort.dir;
     });
   }, [teachers, q, programme, sort]);
+
+  const classesInView = programme === 'all' ? teachers.flatMap((t) => t.past) : teachers.flatMap((t) => t.past.filter((c) => c.programme === programme));
 
   const th = (label: string, key: Key, right = true) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={cn('whitespace-nowrap px-3 py-2.5 font-medium', right && 'text-right')}>
@@ -44,16 +50,16 @@ export function OnlineTeachersPage() {
     <div className="flex flex-col gap-7">
       <PageHeader eyebrow="Online" title="The" emphasis="online teachers" description={`${plural(rows.length, 'teacher')} in view. Teaching Style is the average rating students gave the teacher's style.`} />
 
-      <OnlineCards teachers={rows} />
+      <OnlineCards classes={classesInView} />
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative max-w-xs flex-1 sm:max-w-xs sm:flex-none">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or designation…" aria-label="Search online teachers" className="h-9 pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, subject…" aria-label="Search online teachers" className="h-9 pl-9" />
           </div>
           <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Programme filter">
-            {(['all', ...Object.keys(ONLINE_PROGRAMS)] as (OnlineProgramId | 'all')[]).map((id) => (
+            {(['all', ...(Object.keys(ONLINE_PROGRAMS) as OnlineProgramId[])] as (OnlineProgramId | 'all')[]).map((id) => (
               <button
                 key={id}
                 type="button"
@@ -68,11 +74,12 @@ export function OnlineTeachersPage() {
         </div>
 
         <div className="card-hover overflow-x-auto">
-          <table className="w-full min-w-[820px] text-[13.5px]">
+          <table className="w-full min-w-[880px] text-[13.5px]">
             <thead className="bg-muted/60 text-left text-[12px] text-muted-foreground">
               <tr>
                 {th('Teacher', 'name', false)}
                 <th className="px-3 py-2.5 font-medium">Programmes</th>
+                <th className="px-3 py-2.5 font-medium">Subjects</th>
                 {th('Total Classes', 'classes')}
                 {th('Teaching Style', 'style')}
                 {th('Avg Duration', 'duration')}
@@ -83,12 +90,12 @@ export function OnlineTeachersPage() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">
                     No online teachers match.
                   </td>
                 </tr>
               )}
-              {rows.map((t) => (
+              {rows.map(({ t, m }) => (
                 <tr key={t.id} className="border-t border-border/70 transition-colors hover:bg-accent/40">
                   <td className="px-3 py-2.5">
                     <Link href={`/online/teachers/${t.id}`} className="group flex items-center gap-3">
@@ -109,11 +116,12 @@ export function OnlineTeachersPage() {
                       ))}
                     </span>
                   </td>
-                  <td className="tabular px-3 py-2.5 text-right">{t.totalClasses}</td>
-                  <td className="tabular bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] px-3 py-2.5 text-right font-bold">{fmt(t.teachingStyle)}</td>
-                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{fmt(t.avgDuration, 1)} h</td>
-                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{fmt(t.avgAttendance, 0)}%</td>
-                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{fmt(t.avgWatchTime, 0)} min</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">{t.subjects.join(', ')}</td>
+                  <td className="tabular px-3 py-2.5 text-right">{m.classes || '—'}</td>
+                  <td className="tabular bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] px-3 py-2.5 text-right font-bold">{m.style != null ? fmt(m.style) : '—'}</td>
+                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{m.duration != null ? `${fmt(m.duration, 1)} h` : '—'}</td>
+                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{m.attendance != null ? `${fmt(m.attendance, 0)}%` : '—'}</td>
+                  <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{m.watch != null ? `${fmt(m.watch, 0)} min` : '—'}</td>
                 </tr>
               ))}
             </tbody>

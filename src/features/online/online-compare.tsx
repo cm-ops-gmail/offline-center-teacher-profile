@@ -3,23 +3,21 @@ import { useState } from 'react';
 import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { SearchSelect } from '@/components/ui/search-select';
 import { OnlineChip } from './online-classes';
-import { useOnlineTeachers, type OnlineTeacher } from './data';
+import { metricsOf, useOnlineTeachers, type OnlineTeacher } from './data';
 import { cn } from '@/lib/utils';
 
 interface Row {
   label: string;
-  of: (t: OnlineTeacher) => number;
+  of: (t: OnlineTeacher) => number | null;
   format: (v: number) => string;
-  /** Higher is better (true) or lower is better (false). */
-  good: 'high' | 'low';
 }
 
 const ROWS: Row[] = [
-  { label: 'Total Classes', of: (t) => t.totalClasses, format: (v) => String(v), good: 'high' },
-  { label: 'Teaching Style', of: (t) => t.teachingStyle, format: (v) => v.toFixed(2), good: 'high' },
-  { label: 'Avg Duration', of: (t) => t.avgDuration, format: (v) => `${v.toFixed(1)} h`, good: 'high' },
-  { label: 'Avg Attendance', of: (t) => t.avgAttendance, format: (v) => `${v.toFixed(0)}%`, good: 'high' },
-  { label: 'Avg Watch Time', of: (t) => t.avgWatchTime, format: (v) => `${v.toFixed(0)} min`, good: 'high' },
+  { label: 'Total Classes', of: (t) => metricsOf(t.past).classes, format: (v) => String(v) },
+  { label: 'Teaching Style', of: (t) => metricsOf(t.past).style, format: (v) => v.toFixed(2) },
+  { label: 'Avg Duration', of: (t) => metricsOf(t.past).duration, format: (v) => `${v.toFixed(1)} h` },
+  { label: 'Avg Attendance', of: (t) => metricsOf(t.past).attendance, format: (v) => `${v.toFixed(0)}%` },
+  { label: 'Avg Watch Time', of: (t) => metricsOf(t.past).watch, format: (v) => `${v.toFixed(0)} min` },
 ];
 
 /** Pick two online teachers and see their numbers side by side — the stronger cell is shaded. */
@@ -56,13 +54,13 @@ export function OnlineCompare() {
                 {ROWS.map((row) => {
                   const av = row.of(A);
                   const bv = row.of(B);
-                  const aWins = row.good === 'high' ? av > bv + 1e-9 : av < bv - 1e-9;
-                  const bWins = row.good === 'high' ? bv > av + 1e-9 : bv < av - 1e-9;
+                  const aWins = av != null && (bv == null || av > bv + 1e-9);
+                  const bWins = bv != null && (av == null || bv > av + 1e-9);
                   return (
                     <tr key={row.label} className="border-t border-border/70 transition-colors hover:bg-accent/40">
                       <td className="px-3 py-2.5 font-medium">{row.label}</td>
-                      <td className={cn('tabular px-3 py-2.5 text-right', aWins && 'bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] font-bold')}>{row.format(av)}</td>
-                      <td className={cn('tabular px-3 py-2.5 text-right', bWins && 'bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] font-bold')}>{row.format(bv)}</td>
+                      <td className={cn('tabular px-3 py-2.5 text-right', aWins && 'bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] font-bold')}>{av == null ? '—' : row.format(av)}</td>
+                      <td className={cn('tabular px-3 py-2.5 text-right', bWins && 'bg-[color-mix(in_oklab,var(--good)_9%,var(--background))] font-bold')}>{bv == null ? '—' : row.format(bv)}</td>
                     </tr>
                   );
                 })}
@@ -82,6 +80,11 @@ export function OnlineCompare() {
                       ))}
                     </span>
                   </td>
+                </tr>
+                <tr className="border-t border-border/70">
+                  <td className="px-3 py-2.5 font-medium">Subjects</td>
+                  <td className="px-3 py-2.5 text-right text-muted-foreground">{A.subjects.join(', ')}</td>
+                  <td className="px-3 py-2.5 text-right text-muted-foreground">{B.subjects.join(', ')}</td>
                 </tr>
               </tbody>
             </table>

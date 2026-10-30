@@ -1,13 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@tenminuteschool/design-system';
+import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tenminuteschool/design-system';
 import { Monogram, Pill, SectionTitle } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
 import { OnlineClasses, OnlineChip } from './online-classes';
 import { ManageOnlineProfile } from './manage-online-profile';
-import { useOnlineTeachers, type OnlineTeacher } from './data';
+import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId, type OnlineTeacher } from './data';
 import { cn } from '@/lib/utils';
 
 export function OnlineTeacherProfile({ id }: { id: string }) {
@@ -29,7 +30,7 @@ function NotFound() {
 }
 
 /** Upcoming classes | Past classes — in the URL as `?class=past` so a tab can be shared. */
-function ClassTabs({ teacher }: { teacher: OnlineTeacher }) {
+function ClassTabs({ upcoming, past }: { upcoming: OnlineClass[]; past: OnlineClass[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -44,8 +45,8 @@ function ClassTabs({ teacher }: { teacher: OnlineTeacher }) {
   };
 
   const tabs: { id: 'upcoming' | 'past'; label: string; count: number }[] = [
-    { id: 'upcoming', label: 'Upcoming classes', count: teacher.upcoming.length },
-    { id: 'past', label: 'Past classes', count: teacher.past.length },
+    { id: 'upcoming', label: 'Upcoming classes', count: upcoming.length },
+    { id: 'past', label: 'Past classes', count: past.length },
   ];
 
   return (
@@ -65,12 +66,24 @@ function ClassTabs({ teacher }: { teacher: OnlineTeacher }) {
           </button>
         ))}
       </div>
-      <OnlineClasses key={active} kind={active} classes={active === 'upcoming' ? teacher.upcoming : teacher.past} />
+      <OnlineClasses key={active} kind={active} classes={active === 'upcoming' ? upcoming : past} />
     </div>
   );
 }
 
 function Body({ teacher }: { teacher: OnlineTeacher }) {
+  // The programme and subject filters reshape the cards and both class lists.
+  const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
+  const [subject, setSubject] = useState<string | 'all'>('all');
+
+  const matches = (c: OnlineClass) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject);
+  const past = useMemo(() => teacher.past.filter(matches), [teacher, programme, subject]);
+  const upcoming = useMemo(() => teacher.upcoming.filter(matches), [teacher, programme, subject]);
+  // Subjects offered under the selected programme only (pick a programme, then a subject from it).
+  const subjectOptions = useMemo(
+    () => [...new Set([...teacher.past, ...teacher.upcoming].filter((c) => programme === 'all' || c.programme === programme).map((c) => c.subject))].sort(),
+    [teacher, programme],
+  );
   const fields: [string, string][] = [
     ['Designation', teacher.designation],
     ['Email', teacher.email],
@@ -98,6 +111,8 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
               {teacher.programmes.map((p) => (
                 <OnlineChip key={p} id={p} />
               ))}
+              <span>·</span>
+              <span>{teacher.subjects.join(', ')}</span>
             </p>
           </div>
         </div>
@@ -116,8 +131,51 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
         </dl>
       </section>
 
-      <OnlineCards teachers={[teacher]} />
-      <ClassTabs teacher={teacher} />
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="grid w-48 gap-1.5">
+            <Label>Programme</Label>
+            <Select value={programme} onValueChange={(v) => setProgramme(v === 'all' ? 'all' : (v as OnlineProgramId))}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All programmes</SelectItem>
+                {teacher.programmes.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {ONLINE_PROGRAMS[p].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid w-48 gap-1.5">
+            <Label>Subject</Label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All subjects</SelectItem>
+                {subjectOptions.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <OnlineCards classes={past} />
+        {(programme !== 'all' || subject !== 'all') && (
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}. Set the filters back to “All” to see everything.
+          </p>
+        )}
+      </section>
+
+      <ClassTabs upcoming={upcoming} past={past} />
     </div>
   );
 }
