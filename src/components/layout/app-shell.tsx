@@ -10,16 +10,36 @@ import { Sidebar } from './sidebar';
 export function AppShell({ children }: { children: ReactNode }) {
   const embedded = useIsEmbedded();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   useEffect(() => setMenuOpen(false), [pathname]);
+
+  // The program manager's "hide the menu" choice is remembered between visits.
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem('sidebar-collapsed') === '1');
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+    } catch {}
+  }, [collapsed]);
 
   return (
     <Suspense>
       <RatingsProvider>
         <div className="flex min-h-dvh flex-col">
-          <Header embedded={embedded} onMenu={() => setMenuOpen(true)} />
+          <Header embedded={embedded} onMenu={() => setMenuOpen(true)} sidebarCollapsed={collapsed} onToggleSidebar={() => setCollapsed((c) => !c)} />
           <div className="flex min-h-0 flex-1">
-            <Sidebar embedded={embedded} open={menuOpen} onClose={() => setMenuOpen(false)} />
+            <Sidebar
+              embedded={embedded}
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              collapsed={collapsed}
+              onCollapse={() => setCollapsed(true)}
+              onExpand={() => setCollapsed(false)}
+            />
             <div className="flex min-w-0 flex-1 flex-col">
               <main className="mx-auto w-full max-w-6xl flex-1 p-3 sm:p-4 lg:p-8">{children}</main>
             </div>
