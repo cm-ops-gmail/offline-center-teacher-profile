@@ -15,6 +15,8 @@ npm run dev               # http://localhost:3000
 npm run build && npm start
 ```
 
+Optional add-ons, run in the SQL editor the same way: `supabase/add-opex.sql` (OpEx team ratings), `supabase/add-programme-team.sql` (programme team ratings), `supabase/add-dates.sql`, and `supabase/add-teacher-profiles.sql` (**Manage profile** on a teacher's page: name, designation, email, experience, phone, active/inactive status, address and photo — creates the `teacher_profiles` table plus a public `teacher-photos` storage bucket for the images).
+
 All data lives in three Supabase tables — `master_ratings` (one row per teacher × branch × batch × round, what the dashboard reads), `student_responses` (one row per student form) and `lookups` (branch / batch dropdown lists). Nothing reads or writes Google Sheets any more; the `GOOGLE_*` variables are only used by `npm run db:seed` (add `-- --force` to wipe and re-import).
 Credentials are only ever read on the server (`src/server/db.ts`); the browser talks to `/api/ratings`.
 
@@ -29,7 +31,7 @@ Credentials are only ever read on the server (`src/server/db.ts`); the browser t
 |---|---|
 | `/` and `/programs/[id]` | **Averages only** by default: headline Average Rating, then by programme / branch / level / teacher. Pick any filter (programme, branch, level, teacher, batch, class) or click a row and the **sheet-style data** appears: First/Last Rating average rows, then every rating row with the five criteria. |
 | `/compare` (also on the overview) | **Teacher Comparison**: pick two teachers (searchable dropdowns) and see Average Rating, First/Last, improvement, programmes, branches, batches, best/worst batch, per-programme ratings and every criterion side by side. The stronger cell in each row is shaded. The pair is kept in the URL (`?a=&b=`). |
-| `/teachers`, `/teachers/[id]` | Teacher list with Average Rating; a profile opens straight into the sheet-style data per programme |
+| `/teachers`, `/teachers/[id]` | Teacher list with Average Rating; a profile opens straight into the sheet-style data per programme. **Manage profile** (top right of a teacher's page) lets a program manager edit their name, designation, email, years of experience, phone, active/inactive status, address and photo |
 | `/branches` | Average Rating by branch, and a branch × programme grid |
 | `/collect` | **Student rating** (under Collect) — photograph the paper forms, OCR reads them, you check, and the averages are saved to the database (see below) |
 | `/data-health` | What was read, what was tidied, what to fix in the data |

@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Search } from 'lucide-react';
 import { Input } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
 import { FilterBar } from '@/components/layout/filter-bar';
-import { Monogram, PageHeader, ProgramChip } from '@/components/ui/primitives';
+import { Monogram, PageHeader, Pill, ProgramChip } from '@/components/ui/primitives';
 import { RatingSummary } from '@/features/opex/rating-summary';
 import { Kpis } from '@/features/dashboard/dashboard';
 import { byTeacher, summarize } from '@/features/ratings/analytics';
@@ -26,6 +26,7 @@ function Body() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'rating', dir: -1 });
   const codes = useMemo(() => new Map((data?.teachers ?? []).map((t) => [t.id, t.code])), [data]);
+  const profiles = useMemo(() => new Map((data?.teachers ?? []).map((t) => [t.id, t.profile])), [data]);
 
   const opexAvg = useMemo(() => {
     const by = new Map<string, number[]>();
@@ -43,6 +44,7 @@ function Body() {
       id: g.key,
       name: g.label,
       code: codes.get(g.key) ?? null,
+      profile: profiles.get(g.key),
       programs: [...new Set(g.batches.map((b) => b.program))] as ProgramId[],
       ...g.summary,
       opex: opexAvg.get(g.key) ?? null,
@@ -59,7 +61,7 @@ function Body() {
       if (bv === null) return -1;
       return (typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv))) * sort.dir;
     });
-  }, [batches, codes, opexAvg, progAvg, q, sort]);
+  }, [batches, codes, profiles, opexAvg, progAvg, q, sort]);
 
   const th = (label: string, key: Key, right = true) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={cn('whitespace-nowrap px-3 py-2.5 font-medium', right && 'text-right')}>
@@ -110,9 +112,12 @@ function Body() {
                 <tr key={r.id} className="border-t border-border/70 transition-colors hover:bg-accent/40">
                   <td className="px-3 py-2.5">
                     <Link href={`/teachers/${r.id}`} className="group flex items-center gap-3">
-                      <Monogram name={r.name} size="sm" />
+                      <Monogram name={r.name} src={r.profile?.imageUrl ?? null} size="sm" />
                       <span>
-                        <span className="block font-medium group-hover:underline">{r.name}</span>
+                        <span className="flex items-center gap-2 font-medium group-hover:underline">
+                          {r.name}
+                          {r.profile?.status === 'inactive' && <Pill tone="warn" className="text-[10.5px]">Inactive</Pill>}
+                        </span>
                         {r.code && <span className="block text-[11.5px] text-muted-foreground">{r.code}</span>}
                       </span>
                     </Link>

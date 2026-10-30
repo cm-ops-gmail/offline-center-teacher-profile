@@ -1,6 +1,6 @@
 import 'server-only';
 import { PROGRAMS } from '@/features/ratings/programs';
-import type { BatchRecord, DataIssue, OpexRating, ProgramId, Rating, RatingsPayload, Teacher } from '@/features/ratings/types';
+import type { BatchRecord, DataIssue, OpexRating, ProgramId, Rating, RatingsPayload, Teacher, TeacherProfile } from '@/features/ratings/types';
 import type { ProgramDef } from '@/features/ratings/programs';
 
 /* ------------------------------------------------------------------ *
@@ -67,6 +67,28 @@ export async function selectAll<T>(table: string, query = ''): Promise<T[]> {
   }
 }
 
+/** Puts a file into a Supabase Storage bucket (upsert) and returns its public URL. */
+export async function storageUpload(bucket: string, path: string, file: File): Promise<string> {
+  const key = apiKey();
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl()}/storage/v1/object/${bucket}/${path}`, {
+      method: 'POST',
+      headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: await file.arrayBuffer(),
+      cache: 'no-store',
+    });
+  } catch (e) {
+    throw new AppError(502, `Could not reach the file storage: ${e instanceof Error ? e.message : 'network error'}`);
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new AppError(502, `Could not save the photo (${body.message ?? res.statusText}). Run supabase/add-teacher-profiles.sql so the "teacher-photos" bucket exists.`);
+  }
+  // The ?v= busts the browser cache every time a new photo replaces an old one at the same path.
+  return `${baseUrl()}/storage/v1/object/public/${bucket}/${path}?v=${Date.now()}`;
+}
+
 /* ------------------------------------------------------------------ *
  * Row shapes
  * ------------------------------------------------------------------ */
@@ -115,6 +137,31 @@ export interface OpexRow {
   average_rating: number | null;
   remarks: string;
   rated_on: string | null;
+}
+
+export interface TeacherProfileRow {
+  teacher_id: string;
+  name: string;
+  designation: string;
+  email: string;
+  phone: string;
+  years_of_experience: number | null;
+  status: 'active' | 'inactive';
+  address: string;
+  image_url: string | null;
+}
+
+function toProfile(r: TeacherProfileRow): TeacherProfile {
+  return {
+    name: r.name.trim(),
+    designation: r.designation.trim(),
+    email: r.email.trim(),
+    phone: r.phone.trim(),
+    yearsOfExperience: r.years_of_experience == null ? null : Number(r.years_of_experience),
+    status: r.status === 'inactive' ? 'inactive' : 'active',
+    address: r.address.trim(),
+    imageUrl: r.image_url?.trim() || null,
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -235,11 +282,13 @@ function parseProgram(program: ProgramDef, rows: MasterRow[], teacherIds: Map<st
 /* ------------------------------------------------------------------ */
 
 export async function loadRatings(): Promise<RatingsPayload> {
-  const [all, opexRows, programmeRows] = await Promise.all([
+  const [all, opexRows, programmeRows, profileRows] = await Promise.all([
     selectAll<MasterRow>('master_ratings', 'select=*'),
     // the OpEx table is optional: the dashboard keeps working until it has been created
     selectAll<OpexRow>('opex_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
     selectAll<OpexRow>('programme_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
+    // profiles saved through Manage profile are optional too
+    selectAll<TeacherProfileRow>('teacher_profiles', 'select=*').catch(() => [] as TeacherProfileRow[]),
   ]);
 
   const issues: DataIssue[] = [];
@@ -268,13 +317,15 @@ export async function loadRatings(): Promise<RatingsPayload> {
     if (key) b.teacherName = names.get(key) ?? b.teacherName;
   }
 
+  const profiles = new Map(profileRows.map((r) => [r.teacher_id, toProfile(r)]));
+
   const teachers: Teacher[] = [...teacherIds.entries()]
     .map(([key, id]) => {
       const name = names.get(key) ?? key;
       const code = [...(codes.get(key) ?? [])][0] ?? null;
       // The spelling used most often in the data (e.g. "LCI004 - SIRAZUM MUNIRA"), so new rows match existing ones.
       const sheetName = [...(spellings.get(key) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0] ?? (code ? `${code} - ${name}` : name);
-      return { id, name, code, sheetName };
+      return { id, name, code, sheetName, ...(profiles.get(id) ? { profile: profiles.get(id) } : {}) };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -315,6 +366,17 @@ export async function loadRatings(): Promise<RatingsPayload> {
   });
 
   const opex = toRatings(opexRows.rows);
+  const programme = toRatings(programmeRows.rows);
+
+  // A name set in Manage profile overrides the sheet's spelling everywhere the teacher is named.
+  const renamed = new Map<string, string>();
+  for (const t of teachers) if (t.profile?.name && t.profile.name !== t.name) renamed.set(t.id, t.profile.name);
+  if (renamed.size) {
+    for (const b of batches) if (renamed.has(b.teacherId)) b.teacherName = renamed.get(b.teacherId)!;
+    for (const o of [...opex, ...programme]) if (renamed.has(o.teacherId)) o.teacherName = renamed.get(o.teacherId)!;
+    for (const t of teachers) if (renamed.has(t.id)) t.name = renamed.get(t.id)!;
+  }
+
   const ref = new URL(baseUrl()).hostname.split('.')[0];
   return {
     syncedAt: new Date().toISOString(),
@@ -326,7 +388,7 @@ export async function loadRatings(): Promise<RatingsPayload> {
     tabs: tabStats,
     opex,
     opexReady: opexRows.ready,
-    programme: toRatings(programmeRows.rows),
+    programme,
     programmeReady: programmeRows.ready,
   };
 }

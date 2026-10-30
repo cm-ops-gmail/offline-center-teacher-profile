@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@tenminuteschool/design-system';
 import { DataGate } from '@/components/ui/data-gate';
-import { Monogram, ProgramChip, SectionTitle } from '@/components/ui/primitives';
+import { Monogram, Pill, ProgramChip, SectionTitle } from '@/components/ui/primitives';
 import { RatingSummary } from '@/features/opex/rating-summary';
 import { RatingTabs } from '@/features/opex/rating-tabs';
 import { OpexPanel } from '@/features/opex/opex-panel';
@@ -13,6 +13,8 @@ import { DashboardFilters } from '@/features/programs/dashboard-filters';
 import { summarize } from '@/features/ratings/analytics';
 import { useRatingsData } from '@/features/ratings/filters';
 import { PROGRAMS, PROGRAM_BY_ID } from '@/features/ratings/programs';
+import type { Teacher } from '@/features/ratings/types';
+import { ManageProfile } from '@/features/teachers/manage-profile';
 import { plural } from '@/lib/format';
 
 export function TeacherProfile({ id }: { id: string }) {
@@ -21,7 +23,7 @@ export function TeacherProfile({ id }: { id: string }) {
       {(data) => {
         const teacher = data.teachers.find((t) => t.id === id);
         if (!teacher || !data.batches.some((b) => b.teacherId === id)) return <NotFound />;
-        return <Body id={id} name={teacher.name} code={teacher.code} />;
+        return <Body id={id} teacher={teacher} />;
       }}
     </DataGate>
   );
@@ -39,8 +41,10 @@ function NotFound() {
   );
 }
 
-function Body({ id, name, code }: { id: string; name: string; code: string | null }) {
+function Body({ id, teacher }: { id: string; teacher: Teacher }) {
   const { data, filtered, filters, opexView, programmeView } = useRatingsData();
+  const name = teacher.name;
+  const profile = teacher.profile;
   const opex = opexView({ teacher: id });
   const programme = programmeView({ teacher: id });
   const all = useMemo(() => (data?.batches ?? []).filter((b) => b.teacherId === id), [data, id]);
@@ -50,6 +54,12 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
   const branches = [...new Set(all.map((b) => b.branch))];
   const remarks = view.filter((b) => b.remarks.length > 0);
   const round = filters.cls === 'first' ? 'First Rating' : 'Last Rating';
+  const contact = [
+    profile?.email,
+    profile?.phone,
+    profile?.yearsOfExperience != null && `${profile.yearsOfExperience} yr${profile.yearsOfExperience === 1 ? '' : 's'} of experience`,
+    profile?.address,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="flex flex-col gap-7">
@@ -57,19 +67,27 @@ function Body({ id, name, code }: { id: string; name: string; code: string | nul
         <ArrowLeft className="size-3.5" /> All teachers
       </Link>
 
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <Monogram name={name} size="lg" />
-        <div>
-          <p className="eyebrow mb-1.5">{code ?? 'Teacher'}</p>
-          <h1 className="text-lg font-bold sm:text-xl">{name}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-muted-foreground">
-            {programs.map((p) => (
-              <ProgramChip key={p.id} id={p.id} />
-            ))}
-            <span>·</span>
-            <span>{branches.join(', ')}</span>
-          </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Monogram name={name} src={profile?.imageUrl ?? null} size="lg" />
+          <div>
+            <p className="eyebrow mb-1.5">{teacher.code ?? 'Teacher'}</p>
+            <h1 className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-lg font-bold sm:text-xl">
+              {name}
+              {profile && <Pill tone={profile.status === 'active' ? 'good' : 'warn'}>{profile.status === 'active' ? 'Active' : 'Inactive'}</Pill>}
+            </h1>
+            {profile?.designation && <p className="mt-1 text-sm text-foreground/80">{profile.designation}</p>}
+            <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-muted-foreground">
+              {programs.map((p) => (
+                <ProgramChip key={p.id} id={p.id} />
+              ))}
+              <span>·</span>
+              <span>{branches.join(', ')}</span>
+            </p>
+            {contact.length > 0 && <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{contact.join(' · ')}</p>}
+          </div>
         </div>
+        <ManageProfile teacher={teacher} />
       </header>
 
       <RatingSummary teacher={id} interactive />

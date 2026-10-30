@@ -24,12 +24,28 @@ export interface BatchRecord {
   remarks: string[];
 }
 
+/** Profile details a program manager keeps through the Manage profile dialog. */
+export interface TeacherProfile {
+  name: string;
+  designation: string;
+  email: string;
+  phone: string;
+  /** Years of Experience, as entered; null when blank. */
+  yearsOfExperience: number | null;
+  status: 'active' | 'inactive';
+  address: string;
+  /** Public URL of the teacher's photo, when one was uploaded. */
+  imageUrl: string | null;
+}
+
 export interface Teacher {
   id: string;
   name: string;
   code: string | null;
   /** How the master sheet spells this teacher (most common form), e.g. "LCI004 - SIRAZUM MUNIRA". */
   sheetName: string;
+  /** Saved through Manage profile (supabase/add-teacher-profiles.sql); optional because the table is an add-on. */
+  profile?: TeacherProfile;
 }
 
 export type IssueKind =

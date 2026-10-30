@@ -92,15 +92,20 @@ export function ProgramChip({ id, className }: { id: ProgramId; className?: stri
   );
 }
 
-export function Monogram({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
+/** Initials circle; shows the teacher's uploaded photo instead when one is saved. */
+export function Monogram({ name, size = 'md', src }: { name: string; size?: 'sm' | 'md' | 'lg'; src?: string | null }) {
+  const dims = size === 'sm' ? 'size-8 text-xs' : size === 'md' ? 'size-9 text-sm' : 'size-14 text-lg';
+  if (src) {
+    return (
+      <span className={cn('relative shrink-0 overflow-hidden rounded-full bg-muted', dims)} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element -- small user-uploaded avatars; the Next loader adds nothing here */}
+        <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
+      </span>
+    );
+  }
   return (
     <span
-      className={cn(
-        'grid shrink-0 place-items-center rounded-full bg-muted font-semibold text-muted-foreground',
-        size === 'sm' && 'size-8 text-xs',
-        size === 'md' && 'size-9 text-sm',
-        size === 'lg' && 'size-14 text-lg',
-      )}
+      className={cn('grid shrink-0 place-items-center rounded-full bg-muted font-semibold text-muted-foreground', dims)}
       aria-hidden
     >
       {initials(name)}
