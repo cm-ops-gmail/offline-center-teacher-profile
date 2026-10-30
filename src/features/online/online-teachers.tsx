@@ -2,10 +2,9 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Search } from 'lucide-react';
-import { Input } from '@tenminuteschool/design-system';
+import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tenminuteschool/design-system';
 import { Monogram, PageHeader, Pill } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
-import { OnlineChip } from './online-classes';
 import { metricsOf, ONLINE_PROGRAMS, useOnlineTeachers, type OnlineProgramId, type OnlineTeacher } from './data';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -16,13 +15,16 @@ export function OnlineTeachersPage() {
   const teachers = useOnlineTeachers();
   const [q, setQ] = useState('');
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
+  const [teacherFilter, setTeacherFilter] = useState<string>('all');
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'style', dir: -1 });
 
-  // Every number comes from the teacher's past classes, narrowed by the programme filter.
+  // Every number comes from the teachers' past classes, narrowed by the programme and teacher filters.
+  const inFilter = useMemo(() => teachers.filter((t) => (teacherFilter === 'all' || t.id === teacherFilter) && (programme === 'all' || t.programmes.includes(programme))), [teachers, teacherFilter, programme]);
+  const classesInView = useMemo(() => inFilter.flatMap((t) => (programme === 'all' ? t.past : t.past.filter((c) => c.programme === programme))), [inFilter, programme]);
+
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const list = teachers
-      .filter((t) => programme === 'all' || t.programmes.includes(programme))
+    const list = inFilter
       .filter((t) => !needle || `${t.name} ${t.designation} ${t.subjects.join(' ')}`.toLowerCase().includes(needle))
       .map((t) => ({ t, m: metricsOf(programme === 'all' ? t.past : t.past.filter((c) => c.programme === programme)) }));
     const val = (r: (typeof list)[number]) => (sort.key === 'name' ? r.t.name : sort.key === 'classes' ? r.m.classes : sort.key === 'style' ? r.m.style : sort.key === 'duration' ? r.m.duration : sort.key === 'attendance' ? r.m.attendance : r.m.watch);
@@ -33,9 +35,7 @@ export function OnlineTeachersPage() {
       if (bv == null) return -1;
       return (typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv))) * sort.dir;
     });
-  }, [teachers, q, programme, sort]);
-
-  const classesInView = programme === 'all' ? teachers.flatMap((t) => t.past) : teachers.flatMap((t) => t.past.filter((c) => c.programme === programme));
+  }, [inFilter, programme, q, sort]);
 
   const th = (label: string, key: Key, right = true) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={cn('whitespace-nowrap px-3 py-2.5 font-medium', right && 'text-right')}>
@@ -53,23 +53,42 @@ export function OnlineTeachersPage() {
       <OnlineCards classes={classesInView} />
 
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <div className="relative max-w-xs flex-1 sm:max-w-xs sm:flex-none">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, subject…" aria-label="Search online teachers" className="h-9 pl-9" />
           </div>
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Programme filter">
-            {(['all', ...(Object.keys(ONLINE_PROGRAMS) as OnlineProgramId[])] as (OnlineProgramId | 'all')[]).map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setProgramme(id)}
-                aria-pressed={programme === id}
-                className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium ring-1 ring-inset transition-colors', programme === id ? 'bg-foreground text-background ring-foreground' : 'bg-background text-muted-foreground ring-border hover:text-foreground')}
-              >
-                {id === 'all' ? 'All programmes' : ONLINE_PROGRAMS[id].label}
-              </button>
-            ))}
+          <div className="grid w-44 gap-1.5">
+            <Label htmlFor="tl-programme">Programme</Label>
+            <Select value={programme} onValueChange={(v) => setProgramme(v === 'all' ? 'all' : (v as OnlineProgramId))}>
+              <SelectTrigger id="tl-programme" className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All programmes</SelectItem>
+                {(Object.keys(ONLINE_PROGRAMS) as OnlineProgramId[]).map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {ONLINE_PROGRAMS[p].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid w-52 gap-1.5">
+            <Label htmlFor="tl-teacher">Teacher</Label>
+            <Select value={teacherFilter} onValueChange={setTeacherFilter}>
+              <SelectTrigger id="tl-teacher" className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All teachers</SelectItem>
+                {teachers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -109,12 +128,8 @@ export function OnlineTeachersPage() {
                       </span>
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <span className="flex flex-wrap gap-x-3 gap-y-1">
-                      {t.programmes.map((p) => (
-                        <OnlineChip key={p} id={p} className="text-[12.5px]" />
-                      ))}
-                    </span>
+                  <td className="tabular px-3 py-2.5 text-muted-foreground" title={t.programmes.map((p) => ONLINE_PROGRAMS[p].label).join(', ')}>
+                    {t.programmes.length}
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">{t.subjects.join(', ')}</td>
                   <td className="tabular px-3 py-2.5 text-right">{m.classes || '—'}</td>

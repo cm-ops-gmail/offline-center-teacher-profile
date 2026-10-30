@@ -134,9 +134,9 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-4">
           <div className="grid w-48 gap-1.5">
-            <Label>Programme</Label>
+            <Label htmlFor="tp-programme">Programme</Label>
             <Select value={programme} onValueChange={(v) => setProgramme(v === 'all' ? 'all' : (v as OnlineProgramId))}>
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger id="tp-programme" className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -150,9 +150,9 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
             </Select>
           </div>
           <div className="grid w-48 gap-1.5">
-            <Label>Subject</Label>
+            <Label htmlFor="tp-subject">Subject</Label>
             <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger id="tp-subject" className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

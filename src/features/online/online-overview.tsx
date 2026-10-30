@@ -1,56 +1,29 @@
 'use client';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tenminuteschool/design-system';
 import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
-import { OnlineChip } from './online-classes';
-import { metricsOf, ONLINE_PROGRAMS, SUBJECTS, useOnlineTeachers, type OnlineProgramId } from './data';
-import { fmt } from '@/lib/format';
+import { OnlineClasses } from './online-classes';
+import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId } from './data';
 
-/** The Online Teacher segment's landing page: the headline cards, then the numbers by programme and subject. */
+/** The Online Teacher segment's landing page: the headline cards, then every teacher's upcoming classes with programme / subject filters. */
 export function OnlineOverview() {
   const teachers = useOnlineTeachers();
-  const allPast = teachers.flatMap((t) => t.past);
+  const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
+  const [subject, setSubject] = useState<string | 'all'>('all');
 
-  const byProgramme = (Object.keys(ONLINE_PROGRAMS) as OnlineProgramId[]).map((id) => {
-    const group = teachers.filter((t) => t.programmes.includes(id));
-    const classes = allPast.filter((c) => c.programme === id);
-    return { id, teachers: group.length, m: metricsOf(classes) };
-  });
+  const allPast = useMemo(() => teachers.flatMap((t) => t.past), [teachers]);
 
-  const bySubject = SUBJECTS.map((s) => {
-    const classes = allPast.filter((c) => c.subject === s);
-    return { subject: s, teachers: teachers.filter((t) => t.subjects.includes(s)).length, m: metricsOf(classes) };
-  });
-
-  const table = (rows: { key: string; label: React.ReactNode; teachers: number; m: ReturnType<typeof metricsOf> }[]) => (
-    <div className="card-hover overflow-x-auto">
-      <table className="w-full min-w-[720px] text-[13.5px]">
-        <thead className="bg-muted/60 text-left text-[12px] text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2.5 font-medium">Name</th>
-            <th className="px-3 py-2.5 text-right font-medium">Teachers</th>
-            <th className="px-3 py-2.5 text-right font-medium">Classes</th>
-            <th className="px-3 py-2.5 text-right font-medium">Teaching Style</th>
-            <th className="px-3 py-2.5 text-right font-medium">Avg Duration</th>
-            <th className="px-3 py-2.5 text-right font-medium">Avg Attendance</th>
-            <th className="px-3 py-2.5 text-right font-medium">Avg Watch Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.key} className="border-t border-border/70 transition-colors hover:bg-accent/40">
-              <td className="px-3 py-2.5">{r.label}</td>
-              <td className="tabular px-3 py-2.5 text-right">{r.teachers}</td>
-              <td className="tabular px-3 py-2.5 text-right font-bold">{r.m.classes}</td>
-              <td className="tabular px-3 py-2.5 text-right">{r.m.style != null ? fmt(r.m.style) : '—'}</td>
-              <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{r.m.duration != null ? `${fmt(r.m.duration, 1)} h` : '—'}</td>
-              <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{r.m.attendance != null ? `${fmt(r.m.attendance, 0)}%` : '—'}</td>
-              <td className="tabular px-3 py-2.5 text-right text-muted-foreground">{r.m.watch != null ? `${fmt(r.m.watch, 0)} min` : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+  // Every teacher's upcoming classes, tagged with the teacher, narrowed by the filters, soonest first.
+  const subjectOptions = useMemo(() => [...new Set(teachers.flatMap((t) => [...t.past, ...t.upcoming].map((c) => c.subject)))].sort(), [teachers]);
+  const upcoming = useMemo(
+    () =>
+      teachers
+        .flatMap((t) => t.upcoming.map((c) => ({ ...c, teacherName: t.name })))
+        .filter((c) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [teachers, programme, subject],
   );
 
   return (
@@ -60,13 +33,49 @@ export function OnlineOverview() {
       <OnlineCards classes={allPast} />
 
       <section className="flex flex-col gap-3">
-        <SectionTitle title="By programme" hint="Click a teacher on the Teachers screen to open their classes." />
-        {table(byProgramme.map((p) => ({ key: p.id, label: <OnlineChip id={p.id} />, teachers: p.teachers, m: p.m })))}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <SectionTitle title="By subject" />
-        {table(bySubject.map((s) => ({ key: s.subject, label: s.subject, teachers: s.teachers, m: s.m })))}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <SectionTitle title="Upcoming classes" hint="Every online teacher's schedule, soonest first." />
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="grid w-44 gap-1.5">
+              <Label htmlFor="ov-programme">Programme</Label>
+              <Select value={programme} onValueChange={(v) => setProgramme(v === 'all' ? 'all' : (v as OnlineProgramId))}>
+                <SelectTrigger id="ov-programme" className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All programmes</SelectItem>
+                  {(Object.keys(ONLINE_PROGRAMS) as OnlineProgramId[]).map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {ONLINE_PROGRAMS[p].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid w-44 gap-1.5">
+              <Label htmlFor="ov-subject">Subject</Label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger id="ov-subject" className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All subjects</SelectItem>
+                  {subjectOptions.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <OnlineClasses kind="upcoming" classes={upcoming as OnlineClass[]} showTeacher />
+        {(programme !== 'all' || subject !== 'all') && (
+          <p className="text-xs text-muted-foreground">
+            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}. Set the filters back to “All” to see everything.
+          </p>
+        )}
       </section>
 
       <p className="text-[13px] text-muted-foreground">
