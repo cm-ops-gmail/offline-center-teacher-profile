@@ -22,7 +22,15 @@ export const SUBJECTS = ['English', 'Mathematics', 'Physics', 'Chemistry', 'ICT'
 
 export interface OnlineClass {
   id: string;
+  /** What the class covers, e.g. "ক্রোমাটোগ্রাফি". */
+  topic: string;
+  /** Live (taught in the studio) or Recorded. */
+  type: 'Live' | 'Recorded';
   programme: OnlineProgramId;
+  /** The full program name in the class system, e.g. "HSC 27 অনলাইন ব্যাচ - ফিজিক্স". */
+  programName: string;
+  /** The course inside the program, e.g. "Physics 1st Paper". */
+  course: string;
   subject: string;
   batch: string;
   /** YYYY-MM-DD */
@@ -95,6 +103,23 @@ const plusDays = (n: number) => {
   d.setDate(d.getDate() + n);
   return iso(d);
 };
+/** Bangla subject names, used in the program names. */
+const SUBJECT_BN: Record<string, string> = { English: 'ইংরেজি', Mathematics: 'গণিত', Physics: 'ফিজিক্স', Chemistry: 'কেমিস্ট্রি', ICT: 'আইসিটি' };
+
+const TOPICS: Record<string, string[]> = {
+  English: ['Parts of Speech', 'Right Form of Verbs', 'Narration', 'Transformation of Sentences', 'Paragraph Writing', 'Completing Sentences'],
+  Mathematics: ['ম্যাট্রিক্স ও নির্ণায়ক', 'সরলরেখা', 'অন্তরীকরণ', 'যোজিত ফল', 'ত্রিকোণমিতিক অনুপাত', 'বীজগাণিতিক রাশি'],
+  Physics: ['ভেক্টর', 'নিউটনিয়ান বলবিদ্যা', 'কাজ, শক্তি ও ক্ষমতা', 'মহাকর্ষ ও অভিকর্ষ', 'তরঙ্গ', 'স্থির তড়িৎ'],
+  Chemistry: ['ক্রোমাটোগ্রাফি', 'পর্যায়বৃত্ত ধর্ম', 'রাসায়নিক বন্ধন', 'গুণগত রসায়ন', 'মোলের ধারণা', 'অম্ল, ক্ষারক ও লবণ'],
+  ICT: ['সংখ্যা পদ্ধতি', 'ডিজিটাল ডিভাইস', 'ওয়েব ডিজাইন ও HTML', 'প্রোগ্রামিং ভাষা', 'ডেটাবেজ ম্যানেজমেন্ট', 'কমিউনিকেশন সিস্টেম'],
+};
+
+/** HSC courses come in 1st / 2nd papers (ICT has one); the school classes only split English. */
+function courseOf(programme: OnlineProgramId, subject: string, seed: number): string {
+  const papered = programme.startsWith('hsc') ? subject !== 'ICT' : subject === 'English';
+  return papered ? `${subject} ${seed % 2 === 0 ? '1st' : '2nd'} Paper` : subject;
+}
+
 const clamp = (lo: number, hi: number, v: number) => Math.min(hi, Math.max(lo, v));
 
 function makeClasses(teacherId: string, programmes: OnlineProgramId[], subjects: string[], kind: 'upcoming' | 'past', count: number, styleBase: number): OnlineClass[] {
@@ -102,9 +127,14 @@ function makeClasses(teacherId: string, programmes: OnlineProgramId[], subjects:
     const seed = abs(hash(`${teacherId}:${kind}:${i}`));
     const programme = programmes[seed % programmes.length];
     const subject = subjects[abs(hash(`${teacherId}:${kind}:s:${i}`)) % subjects.length];
+    const topics = TOPICS[subject] ?? ['Chapter review'];
     return {
       id: `${teacherId}-${kind}-${i}`,
+      topic: topics[abs(hash(`${teacherId}:${kind}:topic:${i}`)) % topics.length],
+      type: seed % 6 === 0 ? 'Recorded' : 'Live',
       programme,
+      programName: `${ONLINE_PROGRAMS[programme].label} অনলাইন ব্যাচ - ${SUBJECT_BN[subject] ?? subject}`,
+      course: courseOf(programme, subject, abs(hash(`${teacherId}:${kind}:paper:${i}`))),
       subject,
       batch: `${ONLINE_PROGRAMS[programme].label} · ${SECTIONS[abs(seed) % SECTIONS.length]}`,
       date: kind === 'upcoming' ? plusDays(1 + (seed % 14)) : plusDays(-(3 + (seed % 60))),
