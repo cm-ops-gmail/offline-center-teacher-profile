@@ -5,7 +5,8 @@ import { ArrowDown, ArrowUp, Search } from 'lucide-react';
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@tenminuteschool/design-system';
 import { Monogram, PageHeader, Pill } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
-import { metricsOf, ONLINE_PROGRAMS, useOnlineTeachers, type OnlineProgramId, type OnlineTeacher } from './data';
+import { OnlineDateRange } from './online-class-details';
+import { inDateRange, metricsOf, ONLINE_PROGRAMS, useOnlineTeachers, type OnlineProgramId, type OnlineTeacher } from './data';
 import { fmt, plural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -16,17 +17,20 @@ export function OnlineTeachersPage() {
   const [q, setQ] = useState('');
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
   const [teacherFilter, setTeacherFilter] = useState<string>('all');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: 'style', dir: -1 });
 
-  // Every number comes from the teachers' past classes, narrowed by the programme and teacher filters.
+  // Every number comes from the teachers' past classes, narrowed by the programme, teacher and date filters.
+  const pastOf = (t: OnlineTeacher) => t.past.filter((c) => (programme === 'all' || c.programme === programme) && inDateRange(c, from, to));
   const inFilter = useMemo(() => teachers.filter((t) => (teacherFilter === 'all' || t.id === teacherFilter) && (programme === 'all' || t.programmes.includes(programme))), [teachers, teacherFilter, programme]);
-  const classesInView = useMemo(() => inFilter.flatMap((t) => (programme === 'all' ? t.past : t.past.filter((c) => c.programme === programme))), [inFilter, programme]);
+  const classesInView = useMemo(() => inFilter.flatMap(pastOf), [inFilter, programme, from, to]);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = inFilter
       .filter((t) => !needle || `${t.name} ${t.designation} ${t.subjects.join(' ')}`.toLowerCase().includes(needle))
-      .map((t) => ({ t, m: metricsOf(programme === 'all' ? t.past : t.past.filter((c) => c.programme === programme)) }));
+      .map((t) => ({ t, m: metricsOf(pastOf(t)) }));
     const val = (r: (typeof list)[number]) => (sort.key === 'name' ? r.t.name : sort.key === 'classes' ? r.m.classes : sort.key === 'style' ? r.m.style : sort.key === 'duration' ? r.m.duration : sort.key === 'attendance' ? r.m.attendance : r.m.watch);
     return [...list].sort((a, b) => {
       const av = val(a);
@@ -35,7 +39,7 @@ export function OnlineTeachersPage() {
       if (bv == null) return -1;
       return (typeof av === 'number' ? av - (bv as number) : String(av).localeCompare(String(bv))) * sort.dir;
     });
-  }, [inFilter, programme, q, sort]);
+  }, [inFilter, programme, q, sort, from, to]);
 
   const th = (label: string, key: Key, right = true) => (
     <th scope="col" aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={cn('whitespace-nowrap px-3 py-2.5 font-medium', right && 'text-right')}>
@@ -90,6 +94,7 @@ export function OnlineTeachersPage() {
               </SelectContent>
             </Select>
           </div>
+          <OnlineDateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
         </div>
 
         <div className="card-hover overflow-x-auto">

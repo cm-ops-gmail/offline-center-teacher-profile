@@ -42,9 +42,20 @@ export interface OnlineClass {
   duration: number;
   /** % of enrolled students present. */
   attendance: number;
-  /** Average minutes watched. */
+  /** Average minutes watched (fractional — seconds included). */
   watch: number;
+  /** Class-recording numbers, shown in a past class's details. */
+  participants: number;
+  comments: number;
+  doubts: number;
+  uniqueCommenters: number;
+  uniqueDoubters: number;
+  /** Students' rating of the class slides (out of 5). */
+  slideRating: number;
 }
+
+/** Is a class's date inside the From / To range? Empty ends are open. */
+export const inDateRange = (c: OnlineClass, from: string, to: string) => (!from || c.date >= from) && (!to || c.date <= to);
 
 export interface OnlineTeacher {
   id: string;
@@ -127,6 +138,9 @@ function makeClasses(teacherId: string, programmes: OnlineProgramId[], subjects:
     const seed = abs(hash(`${teacherId}:${kind}:${i}`));
     const programme = programmes[seed % programmes.length];
     const subject = subjects[abs(hash(`${teacherId}:${kind}:s:${i}`)) % subjects.length];
+    const participants = 300 + (abs(hash(`${teacherId}:${kind}:p:${i}`)) % 1400);
+    const comments = Math.round(participants * (1 + (seed % 40) / 10));
+    const doubts = seed % 4 === 0 ? 0 : abs(hash(`${teacherId}:${kind}:d:${i}`)) % 60;
     const topics = TOPICS[subject] ?? ['Chapter review'];
     return {
       id: `${teacherId}-${kind}-${i}`,
@@ -142,7 +156,13 @@ function makeClasses(teacherId: string, programmes: OnlineProgramId[], subjects:
       rating: clamp(1, 5, round2(styleBase + ((abs(seed) % 11) - 5) / 20)),
       duration: [1, 1.5, 2][abs(seed) % 3],
       attendance: 55 + (abs(seed) % 41),
-      watch: 8 + (abs(seed) % 28),
+      watch: 8 + (abs(seed) % 28) + (abs(hash(`${teacherId}:${kind}:ws:${i}`)) % 60) / 60,
+      participants,
+      comments,
+      doubts,
+      uniqueCommenters: Math.round(comments / (6 + (seed % 9))),
+      uniqueDoubters: Math.min(doubts, Math.round(doubts / (1 + (seed % 3)))),
+      slideRating: clamp(1, 5, round2(styleBase + ((abs(hash(`${teacherId}:${kind}:sl:${i}`)) % 11) - 5) / 20)),
     };
   });
 }

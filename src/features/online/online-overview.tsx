@@ -5,15 +5,19 @@ import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } 
 import { PageHeader, SectionTitle } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
 import { OnlineClasses } from './online-classes';
-import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId } from './data';
+import { OnlineDateRange } from './online-class-details';
+import { inDateRange, ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId } from './data';
 
 /** The Online Teacher segment's landing page: the headline cards, then every teacher's upcoming classes with programme / subject filters. */
 export function OnlineOverview() {
   const teachers = useOnlineTeachers();
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
   const [subject, setSubject] = useState<string | 'all'>('all');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
-  const allPast = useMemo(() => teachers.flatMap((t) => t.past), [teachers]);
+  // The cards follow the date range too.
+  const allPast = useMemo(() => teachers.flatMap((t) => t.past).filter((c) => inDateRange(c, from, to)), [teachers, from, to]);
 
   // Every teacher's upcoming classes, tagged with the teacher, narrowed by the filters, soonest first.
   const subjectOptions = useMemo(() => [...new Set(teachers.flatMap((t) => [...t.past, ...t.upcoming].map((c) => c.subject)))].sort(), [teachers]);
@@ -21,9 +25,9 @@ export function OnlineOverview() {
     () =>
       teachers
         .flatMap((t) => t.upcoming.map((c) => ({ ...c, teacherName: t.name })))
-        .filter((c) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject))
+        .filter((c) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject) && inDateRange(c, from, to))
         .sort((a, b) => a.date.localeCompare(b.date)),
-    [teachers, programme, subject],
+    [teachers, programme, subject, from, to],
   );
 
   return (
@@ -68,12 +72,14 @@ export function OnlineOverview() {
                 </SelectContent>
               </Select>
             </div>
+            <OnlineDateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
           </div>
         </div>
         <OnlineClasses kind="upcoming" classes={upcoming as OnlineClass[]} showTeacher />
-        {(programme !== 'all' || subject !== 'all') && (
+        {(programme !== 'all' || subject !== 'all' || from || to) && (
           <p className="text-xs text-muted-foreground">
-            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}. Set the filters back to “All” to see everything.
+            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}
+            {(from || to) && ` · ${from || 'start'} to ${to || 'onward'}`}. Set the filters back to “All” and clear the dates to see everything.
           </p>
         )}
       </section>

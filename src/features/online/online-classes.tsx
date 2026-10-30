@@ -3,6 +3,7 @@ import { CalendarDays } from 'lucide-react';
 import { Pill } from '@/components/ui/primitives';
 import { cn } from '@/lib/utils';
 import { ONLINE_PROGRAMS, type OnlineClass, type OnlineProgramId } from './data';
+import { OnlineClassDetails } from './online-class-details';
 
 /** Colour dot + label, like the offline ProgramChip. */
 export function OnlineChip({ id, className }: { id: OnlineProgramId; className?: string }) {
@@ -19,11 +20,11 @@ export function OnlineChip({ id, className }: { id: OnlineProgramId; className?:
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** A list of online classes — one teacher's (upcoming / past) or every teacher's upcoming schedule (showTeacher).
- *  Same columns as the class system: Topic (with its date and time), Status, Program, Course, Type. */
+ *  Same columns as the class system: Topic (with its date and time), Status, Program, Course, Type — and View details on past classes. */
 export function OnlineClasses({ kind, classes, showTeacher = false }: { kind: 'upcoming' | 'past'; classes: (OnlineClass & { teacherName?: string })[]; showTeacher?: boolean }) {
   const upcoming = kind === 'upcoming';
   const rows = [...classes].sort((a, b) => (upcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
-  const cols = showTeacher ? 6 : 5;
+  const cols = (showTeacher ? 6 : 5) + (upcoming ? 0 : 1);
 
   return (
     <div className="card-hover overflow-x-auto">
@@ -36,6 +37,7 @@ export function OnlineClasses({ kind, classes, showTeacher = false }: { kind: 'u
             <th className="px-3 py-2.5 font-medium">Program</th>
             <th className="px-3 py-2.5 font-medium">Course</th>
             <th className="px-3 py-2.5 font-medium">Type</th>
+            {!upcoming && <th className="px-3 py-2.5 text-right font-medium"><span className="sr-only">Details</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -67,6 +69,11 @@ export function OnlineClasses({ kind, classes, showTeacher = false }: { kind: 'u
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{c.course}</td>
               <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{c.type}</td>
+              {!upcoming && (
+                <td className="px-3 py-2 text-right">
+                  <OnlineClassDetails c={c} />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

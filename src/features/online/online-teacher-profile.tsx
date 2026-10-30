@@ -7,8 +7,9 @@ import { Button, Label, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { Monogram, Pill, SectionTitle } from '@/components/ui/primitives';
 import { OnlineCards } from './online-cards';
 import { OnlineClasses, OnlineChip } from './online-classes';
+import { OnlineDateRange } from './online-class-details';
 import { ManageOnlineProfile } from './manage-online-profile';
-import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId, type OnlineTeacher } from './data';
+import { ONLINE_PROGRAMS, useOnlineTeachers, type OnlineClass, type OnlineProgramId, type OnlineTeacher, inDateRange } from './data';
 import { cn } from '@/lib/utils';
 
 export function OnlineTeacherProfile({ id }: { id: string }) {
@@ -72,13 +73,15 @@ function ClassTabs({ upcoming, past }: { upcoming: OnlineClass[]; past: OnlineCl
 }
 
 function Body({ teacher }: { teacher: OnlineTeacher }) {
-  // The programme and subject filters reshape the cards and both class lists.
+  // The programme, subject and date filters reshape the cards and both class lists.
   const [programme, setProgramme] = useState<OnlineProgramId | 'all'>('all');
   const [subject, setSubject] = useState<string | 'all'>('all');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
-  const matches = (c: OnlineClass) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject);
-  const past = useMemo(() => teacher.past.filter(matches), [teacher, programme, subject]);
-  const upcoming = useMemo(() => teacher.upcoming.filter(matches), [teacher, programme, subject]);
+  const matches = (c: OnlineClass) => (programme === 'all' || c.programme === programme) && (subject === 'all' || c.subject === subject) && inDateRange(c, from, to);
+  const past = useMemo(() => teacher.past.filter(matches), [teacher, programme, subject, from, to]);
+  const upcoming = useMemo(() => teacher.upcoming.filter(matches), [teacher, programme, subject, from, to]);
   // Subjects offered under the selected programme only (pick a programme, then a subject from it).
   const subjectOptions = useMemo(
     () => [...new Set([...teacher.past, ...teacher.upcoming].filter((c) => programme === 'all' || c.programme === programme).map((c) => c.subject))].sort(),
@@ -165,12 +168,14 @@ function Body({ teacher }: { teacher: OnlineTeacher }) {
               </SelectContent>
             </Select>
           </div>
+          <OnlineDateRange from={from} to={to} onFrom={setFrom} onTo={setTo} />
         </div>
 
         <OnlineCards classes={past} />
-        {(programme !== 'all' || subject !== 'all') && (
+        {(programme !== 'all' || subject !== 'all' || from || to) && (
           <p className="-mt-3 text-xs text-muted-foreground">
-            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}. Set the filters back to “All” to see everything.
+            Filtered to {programme === 'all' ? 'all programmes' : ONLINE_PROGRAMS[programme].label} · {subject === 'all' ? 'all subjects' : subject}
+            {(from || to) && ` · ${from || 'start'} to ${to || 'onward'}`}. Set the filters back to “All” and clear the dates to see everything.
           </p>
         )}
       </section>
