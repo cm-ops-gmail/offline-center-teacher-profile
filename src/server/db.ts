@@ -287,8 +287,9 @@ export async function loadRatings(): Promise<RatingsPayload> {
     // the OpEx table is optional: the dashboard keeps working until it has been created
     selectAll<OpexRow>('opex_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
     selectAll<OpexRow>('programme_ratings', 'select=*').then((rows) => ({ rows, ready: true }), () => ({ rows: [] as OpexRow[], ready: false })),
-    // profiles saved through Manage profile are optional too
-    selectAll<TeacherProfileRow>('teacher_profiles', 'select=*').catch(() => [] as TeacherProfileRow[]),
+    // profiles saved through Manage profile are optional too — keyed by teacher_id, so
+    // selectAll's order=id paging does not apply; one request is plenty for a few hundred rows
+    rest<TeacherProfileRow[]>('teacher_profiles?select=*').then((rows) => rows ?? [], () => [] as TeacherProfileRow[]),
   ]);
 
   const issues: DataIssue[] = [];
