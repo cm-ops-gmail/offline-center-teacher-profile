@@ -7,7 +7,7 @@ import { useRatingsData } from '@/features/ratings/filters';
 import type { Teacher } from '@/features/ratings/types';
 
 /** Shrinks the picked photo to a 512px square JPEG (centre-cropped): small uploads, tidy avatars. */
-async function squarePhoto(file: File): Promise<File> {
+export async function squarePhoto(file: File): Promise<File> {
   if (!file.type.startsWith('image/')) throw new Error('Use a JPG, PNG or WebP photo.');
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const S = 512;

@@ -2,14 +2,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { APP_NAME, NAV } from '@/lib/nav';
+import { APP_NAME, SEGMENTS } from '@/lib/nav';
 import { ThemeToggle } from './theme-toggle';
 import { SyncStatus } from './sync-status';
 import { LogoutButton } from './logout-button';
 
 function currentLabel(pathname: string): string {
-  const items = NAV.flatMap((g) => [...g.items, ...g.items.flatMap((i) => i.children ?? [])]);
-  const hit = items.filter((i) => (i.href === '/' ? pathname === '/' : pathname === i.href || pathname.startsWith(i.href + '/'))).sort((a, b) => b.href.length - a.href.length)[0];
+  const items = SEGMENTS.flatMap((s) => s.groups).flatMap((g) => [...g.items, ...g.items.flatMap((i) => i.children ?? [])]);
+  const hit = items
+    .filter((i) => (i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(i.href + '/')))
+    .sort((a, b) => b.href.length - a.href.length)[0];
   return hit?.label ?? '';
 }
 
